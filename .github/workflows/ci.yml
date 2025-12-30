@@ -1,0 +1,327 @@
+name: "CI Pipeline"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - '**.sh'
+      - 'tests/**'
+      - 'Dockerfile.test'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: Lint Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ShellCheck
+        run: sudo apt-get install -y shellcheck
+      - name: Run ShellCheck
+        run: shellcheck *.sh
+
+  build-image:
+    name: Build & Cache Image
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build and Cache Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tests/Dockerfile
+          push: false
+          load: false
+          tags: srm-mock:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Restore Image from Cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tests/Dockerfile
+          load: true
+          tags: srm-mock:latest
+          cache-from: type=gha
+
+      - name: Run Install Tests
+        run: |
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            -v $PWD/coverage:/home/pi/coverage \
+            -e COVERAGE=1 \
+            -e COVERAGE_OUTPUT=/home/pi/coverage \
+            srm-mock:latest ./run_tests.sh --unit-install
+
+      - name: Run Uninstall Tests
+        run: |
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            -v $PWD/coverage:/home/pi/coverage \
+            -e COVERAGE=1 \
+            -e COVERAGE_OUTPUT=/home/pi/coverage \
+            srm-mock:latest ./run_tests.sh --unit-uninstall
+
+      - name: Run Wallpaper Tests
+        run: |
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            -v $PWD/coverage:/home/pi/coverage \
+            -e COVERAGE=1 \
+            -e COVERAGE_OUTPUT=/home/pi/coverage \
+            srm-mock:latest ./run_tests.sh --unit-wallpaper
+
+      - name: Upload Install Coverage
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-install
+          path: coverage/unit/install/
+          include-hidden-files: true
+
+      - name: Upload Uninstall Coverage
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-uninstall
+          path: coverage/unit/uninstall/
+          include-hidden-files: true
+
+      - name: Upload Wallpaper Coverage
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-wallpaper
+          path: coverage/unit/wallpaper/
+          include-hidden-files: true
+
+  component-tests:
+    name: Component Tests
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Restore Image from Cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tests/Dockerfile
+          load: true
+          tags: srm-mock:latest
+          cache-from: type=gha
+
+      - name: Run Component Tests
+        run: |
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            -v $PWD/coverage:/home/pi/coverage \
+            -e COVERAGE=1 \
+            -e COVERAGE_OUTPUT=/home/pi/coverage \
+            srm-mock:latest ./run_tests.sh --component-only
+      
+      - name: Upload Component Coverage
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-component
+          path: coverage/component/
+          include-hidden-files: true
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build-image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Restore Image from Cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tests/Dockerfile
+          load: true
+          tags: srm-mock:latest
+          cache-from: type=gha
+
+      - name: Run E2E Tests
+        run: |
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            -v $PWD/coverage:/home/pi/coverage \
+            -e COVERAGE=1 \
+            -e COVERAGE_OUTPUT=/home/pi/coverage \
+            srm-mock:latest ./run_tests.sh --e2e-only
+
+      - name: Upload E2E Coverage
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: coverage-e2e
+          path: coverage/e2e/
+          include-hidden-files: true
+
+  coverage-report:
+    name: Merge & Publish Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests, component-tests, e2e-tests]
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Restore Image from Cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tests/Dockerfile
+          load: true
+          tags: srm-mock:latest
+          cache-from: type=gha
+
+      - name: Download Install Coverage
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: coverage-install
+          path: coverage_inputs/unit/install
+
+      - name: Download Uninstall Coverage
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: coverage-uninstall
+          path: coverage_inputs/unit/uninstall
+
+      - name: Download Wallpaper Coverage
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: coverage-wallpaper
+          path: coverage_inputs/unit/wallpaper
+
+      - name: Download E2E Coverage
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: coverage-e2e
+          path: coverage_inputs/e2e
+
+      - name: Download Component Coverage
+        uses: actions/download-artifact@v4.1.8
+        with:
+          name: coverage-component
+          path: coverage_inputs/component
+
+      - name: Merge Coverage Reports
+        run: |
+          mkdir -p coverage/final
+          chmod 777 coverage/final
+          
+          # Run kcov --merge inside docker
+          docker run --rm \
+            --security-opt seccomp=unconfined \
+            --cap-add SYS_PTRACE \
+            --user root \
+            -v $PWD:/app \
+            -w /app \
+            srm-mock:latest \
+            kcov --merge coverage/final \
+                 coverage_inputs/unit/install \
+                 coverage_inputs/unit/uninstall \
+                 coverage_inputs/unit/wallpaper \
+                 coverage_inputs/component \
+                 coverage_inputs/e2e
+
+          # Standardize path
+          mkdir -p coverage/html_report
+          FOUND_INDEX=$(find coverage/final -name "index.html" | head -n 1)
+          if [ -n "$FOUND_INDEX" ]; then
+             echo "Found index at $FOUND_INDEX"
+             PARENT_DIR=$(dirname "$FOUND_INDEX")
+             cp -r "$PARENT_DIR/"* coverage/html_report/
+             echo "Report moved to coverage/html_report/"
+          else
+             echo "Error: index.html not found in merged output!"
+             exit 1
+          fi
+
+          # Handle Cobertura XML
+          MERGED_XML=$(find coverage/final -name "cobertura.xml" | head -n 1)
+          if [ -f "$MERGED_XML" ]; then
+             cp "$MERGED_XML" coverage/cobertura.xml
+             sed -i 's/branches-covered="\([^"]*\)"/branches-covered="\1" branches-valid="0"/g' coverage/cobertura.xml
+          fi
+
+      - name: Validate Coverage
+        id: validate_coverage
+        run: |
+          if [ -f "coverage/cobertura.xml" ]; then
+             echo "valid=true" >> $GITHUB_OUTPUT
+          else
+             echo "valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload HTML Report
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: html-coverage-report
+          path: coverage/html_report/
+
+      - name: Display Coverage in PR
+        uses: 5monkeys/cobertura-action@v14
+        if: steps.validate_coverage.outputs.valid == 'true'
+        continue-on-error: true
+        with:
+          path: coverage/cobertura.xml
+          minimum_coverage: 0
+          show_missing: true
+          show_line: true
+          show_branch: true
+          report_name: Full Suite Coverage Report
+
+      - name: Restructure Cobertura XML
+        if: steps.validate_coverage.outputs.valid == 'true'
+        run: |
+          python3 tests/transform_coverage.py coverage/cobertura.xml
+
+      - name: Generate Coverage Summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        if: steps.validate_coverage.outputs.valid == 'true'
+        with:
+          filename: coverage/cobertura.xml
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: '90 90'
+
+      - name: Write to Job Summary
+        if: steps.validate_coverage.outputs.valid == 'true'
+        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2.9.0
+        if: github.event_name == 'pull_request' && steps.validate_coverage.outputs.valid == 'true'
+        with:
+          recreate: true
+          path: code-coverage-results.md
