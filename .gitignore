@@ -1,0 +1,21 @@
+# --- Synology System Files ---
+@eaDir/
+#recycle/
+.DS_Store
+Thumbs.db
+
+# --- Script Outputs ---
+# Ignore downloaded images if testing locally
+*.jpg
+*.jpeg
+*.png
+
+# --- Temporary/Logs ---
+*.log
+/tmp/
+
+# Un-ignore assets for documentation screenshots
+!assets/*.png
+
+# --- Coverage ---
+coverage/
