@@ -3,22 +3,22 @@
 setup() {
     INSTALLER="/app/install.sh"
     chmod +x "$INSTALLER"
-    
+
     # Use local path to avoid download
     export LOCAL_INSTALL_PATH="/app/bing_wallpaper_auto_update.sh"
-    
+
     # Clean state
     rm -f /usr/local/bin/bing_wallpaper_auto_update.sh
-    > /etc/crontab
-    
+    >/etc/crontab
+
     # Mock wallpaper script execution during install (auto-apply)
     # We don't want it to actually run heavy logic, just exist
     # But install.sh COPIES the source file.
     # We let it copy the real file, but we mock the dependencies (wget) so it doesn't hang.
-    
+
     # Mock wget to handle Bing API and Image download
     mkdir -p /tmp/bin
-    cat << 'EOF' > /tmp/bin/wget
+    cat <<'EOF' >/tmp/bin/wget
 #!/bin/bash
 if [[ "$@" == *"HPImageArchive.aspx"* ]]; then
     # Return valid JSON for Bing API
@@ -64,15 +64,18 @@ teardown() {
 @test "Component: Config Injection (Resolution: 1080p, Region: ja-JP)" {
     # Run installer non-interactively (Inputs pre-set via env vars)
     run env BING_RESOLUTION="1080p" \
-            BING_MARKET="ja-JP" \
-            BURN_TEXT_OVERLAY="false" \
-            NON_INTERACTIVE="true" \
-            bash "$INSTALLER"
-            
-    [ "$status" -eq 0 ] || { echo "Install Failed: $output"; false; }
-    
+        BING_MARKET="ja-JP" \
+        BURN_TEXT_OVERLAY="false" \
+        NON_INTERACTIVE="true" \
+        bash "$INSTALLER"
+
+    [ "$status" -eq 0 ] || {
+        echo "Install Failed: $output"
+        false
+    }
+
     TARGET="/usr/local/bin/bing_wallpaper_auto_update.sh"
-    
+
     # Verify Injection
     grep 'BING_RESOLUTION="1080p"' "$TARGET"
     grep 'BING_MARKET="ja-JP"' "$TARGET"
@@ -81,22 +84,22 @@ teardown() {
 
 @test "Component: Idempotency (Repeat Install)" {
     export NON_INTERACTIVE="true"
-    
+
     # First Run (Default 4k)
     run env BING_RESOLUTION="4k" NON_INTERACTIVE="true" bash "$INSTALLER"
     [ "$status" -eq 0 ]
-    
+
     # Verify single cron entry
     COUNT=$(grep -c "$TARGET" /etc/crontab || true)
-    
+
     # Second Run (Change Config)
     run env BING_RESOLUTION="1080p" NON_INTERACTIVE="true" bash "$INSTALLER"
     [ "$status" -eq 0 ]
-    
+
     # Verify ONLY one entry remains (sed delete worked)
     FINAL_COUNT=$(grep -c "bing_wallpaper_auto_update.sh" /etc/crontab)
     [ "$FINAL_COUNT" -eq 1 ]
-    
+
     # Verify config updated
     run grep 'BING_RESOLUTION="1080p"' "/usr/local/bin/bing_wallpaper_auto_update.sh"
     [ "$status" -eq 0 ]
@@ -105,9 +108,9 @@ teardown() {
 @test "Component: Service Manager Priority (Mock synoservicectl)" {
     # Ensure synoservicectl exists (Dockerfile mock)
     [ -x "/usr/syno/sbin/synoservicectl" ]
-    
+
     run env NON_INTERACTIVE="true" bash "$INSTALLER"
     [ "$status" -eq 0 ]
-    
+
     [[ "$output" == *"Restarted via synoservicectl"* ]]
 }

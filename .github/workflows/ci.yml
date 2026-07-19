@@ -5,34 +5,107 @@ on:
     branches: [ "main" ]
     paths:
       - '**.sh'
+      - '**.ps1'
+      - '**.py'
+      - '**.json'
+      - '**.yml'
+      - '**.yaml'
       - 'tests/**'
-      - 'Dockerfile.test'
+      - 'tools/**'
+      - '.editorconfig'
+      - '.markdownlint.json'
+      - '.pre-commit-config.yaml'
+      - '.shellcheckrc'
+      - '.yamllint.yml'
+      - 'pyproject.toml'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint Checks
+  quality:
+    name: Quality Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Install ShellCheck
-        run: sudo apt-get install -y shellcheck
-      - name: Run ShellCheck
-        run: shellcheck *.sh
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Install quality dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            jq \
+            python3 \
+            python3-pip \
+            nodejs \
+            npm
+          python3 -m pip install --break-system-packages pip==25.2
+          python3 -m pip install ruff==0.15.22 yamllint==1.38.0
+          sudo npm install --global markdownlint-cli@0.41.0
+
+      - name: Run shell formatter check
+        run: |
+          mapfile -t shell_files < <(git ls-files '*.sh' '*.bats' | grep -v '^node_modules/' || true)
+          if [ "${#shell_files[@]}" -gt 0 ]; then
+            docker run --rm -v "$PWD:/mnt" -w /mnt mvdan/shfmt:v3.13.1 \
+              -i 4 -ci -d "${shell_files[@]}"
+          fi
+
+      - name: Run shell lint
+        run: |
+          mapfile -t shell_files < <(git ls-files '*.sh' | grep -v '^node_modules/' || true)
+          if [ "${#shell_files[@]}" -gt 0 ]; then
+            docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 \
+              --severity=style --external-sources "${shell_files[@]}"
+          fi
+
+      - name: Run YAML lint
+        run: |
+          mapfile -t yaml_files < <(git ls-files '*.yml' '*.yaml' | grep -v '^node_modules/' || true)
+          if [ "${#yaml_files[@]}" -gt 0 ]; then
+            yamllint "${yaml_files[@]}"
+          fi
+
+      - name: Run JSON validation
+        run: |
+          while IFS= read -r file; do
+            jq empty "$file" > /dev/null
+          done < <(git ls-files '*.json' | grep -v '^node_modules/' || true)
+
+      - name: Run Python lint and format checks
+        run: |
+          ruff format --check tests/transform_coverage.py tools/*.py
+          ruff check tests/transform_coverage.py tools/*.py
+
+      - name: Run Markdown lint
+        run: |
+          mapfile -t markdown_files < <(git ls-files '*.md' | grep -v '^node_modules/' || true)
+          if [ "${#markdown_files[@]}" -gt 0 ]; then
+            markdownlint --config .markdownlint.json -- "${markdown_files[@]}"
+          fi
+
+      - name: Run non-Markdown line-length check
+        run: python3 tools/check_line_length.py
+
+      - name: Run suppression policy check
+        run: python3 tools/check_forbidden_suppressions.py
+
+      - name: Run PowerShell lint
+        shell: pwsh
+        run: |
+          Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          Invoke-ScriptAnalyzer -Path tools/runners/run_tests.ps1 -Settings tools/config/PSScriptAnalyzerSettings.psd1 -EnableExit
 
   build-image:
     name: Build & Cache Image
     runs-on: ubuntu-latest
-    needs: lint
+    needs: quality
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Build and Cache Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: tests/Dockerfile
@@ -47,11 +120,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-image
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Restore Image from Cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: tests/Dockerfile
@@ -67,7 +140,7 @@ jobs:
             -v $PWD/coverage:/home/pi/coverage \
             -e COVERAGE=1 \
             -e COVERAGE_OUTPUT=/home/pi/coverage \
-            srm-mock:latest ./run_tests.sh --unit-install
+            srm-mock:latest bash ./tools/runners/run_tests.sh --unit-install
 
       - name: Run Uninstall Tests
         run: |
@@ -77,7 +150,7 @@ jobs:
             -v $PWD/coverage:/home/pi/coverage \
             -e COVERAGE=1 \
             -e COVERAGE_OUTPUT=/home/pi/coverage \
-            srm-mock:latest ./run_tests.sh --unit-uninstall
+            srm-mock:latest bash ./tools/runners/run_tests.sh --unit-uninstall
 
       - name: Run Wallpaper Tests
         run: |
@@ -87,24 +160,24 @@ jobs:
             -v $PWD/coverage:/home/pi/coverage \
             -e COVERAGE=1 \
             -e COVERAGE_OUTPUT=/home/pi/coverage \
-            srm-mock:latest ./run_tests.sh --unit-wallpaper
+            srm-mock:latest bash ./tools/runners/run_tests.sh --unit-wallpaper
 
       - name: Upload Install Coverage
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-install
           path: coverage/unit/install/
           include-hidden-files: true
 
       - name: Upload Uninstall Coverage
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-uninstall
           path: coverage/unit/uninstall/
           include-hidden-files: true
 
       - name: Upload Wallpaper Coverage
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-wallpaper
           path: coverage/unit/wallpaper/
@@ -115,11 +188,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-image
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Restore Image from Cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: tests/Dockerfile
@@ -135,10 +208,10 @@ jobs:
             -v $PWD/coverage:/home/pi/coverage \
             -e COVERAGE=1 \
             -e COVERAGE_OUTPUT=/home/pi/coverage \
-            srm-mock:latest ./run_tests.sh --component-only
+            srm-mock:latest bash ./tools/runners/run_tests.sh --component-only
       
       - name: Upload Component Coverage
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-component
           path: coverage/component/
@@ -149,11 +222,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-image
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Restore Image from Cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: tests/Dockerfile
@@ -169,10 +242,10 @@ jobs:
             -v $PWD/coverage:/home/pi/coverage \
             -e COVERAGE=1 \
             -e COVERAGE_OUTPUT=/home/pi/coverage \
-            srm-mock:latest ./run_tests.sh --e2e-only
+            srm-mock:latest bash ./tools/runners/run_tests.sh --e2e-only
 
       - name: Upload E2E Coverage
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-e2e
           path: coverage/e2e/
@@ -187,11 +260,11 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Restore Image from Cache
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: tests/Dockerfile
@@ -200,31 +273,31 @@ jobs:
           cache-from: type=gha
 
       - name: Download Install Coverage
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-install
           path: coverage_inputs/unit/install
 
       - name: Download Uninstall Coverage
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-uninstall
           path: coverage_inputs/unit/uninstall
 
       - name: Download Wallpaper Coverage
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-wallpaper
           path: coverage_inputs/unit/wallpaper
 
       - name: Download E2E Coverage
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-e2e
           path: coverage_inputs/e2e
 
       - name: Download Component Coverage
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: coverage-component
           path: coverage_inputs/component
@@ -278,23 +351,25 @@ jobs:
              echo "valid=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Append Coverage and Complexity Summary
+        if: steps.validate_coverage.outputs.valid == 'true'
+        run: |
+          python3 tools/coverage_metrics.py \
+            --input coverage/cobertura.xml \
+            --format markdown \
+            --target-per-file 15 \
+            --hard-max-per-file 35 \
+            --target-avg 10 \
+            --hard-max-avg 25 \
+            --enforce-complexity \
+            --output coverage-metrics-summary.md
+          cat coverage-metrics-summary.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload HTML Report
-        uses: actions/upload-artifact@v4.6.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: html-coverage-report
           path: coverage/html_report/
-
-      - name: Display Coverage in PR
-        uses: 5monkeys/cobertura-action@v14
-        if: steps.validate_coverage.outputs.valid == 'true'
-        continue-on-error: true
-        with:
-          path: coverage/cobertura.xml
-          minimum_coverage: 0
-          show_missing: true
-          show_line: true
-          show_branch: true
-          report_name: Full Suite Coverage Report
 
       - name: Restructure Cobertura XML
         if: steps.validate_coverage.outputs.valid == 'true'
@@ -302,7 +377,7 @@ jobs:
           python3 tests/transform_coverage.py coverage/cobertura.xml
 
       - name: Generate Coverage Summary
-        uses: irongut/CodeCoverageSummary@v1.3.0
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # v1.3.0
         if: steps.validate_coverage.outputs.valid == 'true'
         with:
           filename: coverage/cobertura.xml
@@ -320,7 +395,7 @@ jobs:
         run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2.9.0
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
         if: github.event_name == 'pull_request' && steps.validate_coverage.outputs.valid == 'true'
         with:
           recreate: true

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "posttool-quality-reminder",
+  "description": "Non-blocking reminder to run quality gate after edits.",
+  "hooks": [
+    {
+      "name": "post-edit-quality-reminder",
+      "event": "PostToolUse",
+      "tools": ["apply_patch"],
+      "command": "echo Run ./tools/runners/quality.sh or ./tools/runners/run_tests.ps1 before finishing changes."
+    }
+  ]
+}

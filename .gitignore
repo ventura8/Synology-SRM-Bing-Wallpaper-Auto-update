@@ -19,3 +19,6 @@ Thumbs.db
 
 # --- Coverage ---
 coverage/
+
+# --- Node Dependencies ---
+node_modules/
