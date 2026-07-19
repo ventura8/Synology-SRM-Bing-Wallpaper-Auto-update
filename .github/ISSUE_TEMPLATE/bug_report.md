@@ -12,6 +12,7 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. Go to '...'
 2. Click on '...'
 3. Scroll down to '...'
@@ -24,9 +25,10 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the following information):**
- - Router Model: [e.g. RT2600ac]
- - SRM Version: [e.g. 1.3.1-9346]
- - Script Version: [e.g. v1.0]
+
+- Router Model: [e.g. RT2600ac]
+- SRM Version: [e.g. 1.3.1-9346]
+- Script Version: [e.g. v1.0]
 
 **Additional context**
 Add any other context about the problem here.

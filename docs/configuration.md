@@ -9,6 +9,7 @@ The main script `bing_wallpaper_auto_update.sh` contains a configuration section
 - `BURN_TEXT_OVERLAY`: `true`/`false` to overlay metadata on the image.
 
 Environment variables can also be used to override some settings during installation:
+
 - `CRON_HOUR`: Hour for the daily update (0-23).
 - `CRON_MIN`: Minute for the daily update (0-59).
 - `COVERAGE`: Set to `1` to enable coverage reporting during tests.

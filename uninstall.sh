@@ -1,7 +1,6 @@
 #!/bin/sh
 # Uninstaller for Synology SRM 1.3 Bing Wallpaper Script
 
-
 main() {
     USER_ID=$(id -u)
     if [ "$USER_ID" -ne 0 ]; then

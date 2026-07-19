@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "name": "pretool-quality-guard",
+  "description": "Non-blocking reminder hook for quality-sensitive file edits.",
+  "hooks": [
+    {
+      "name": "quality-file-change-reminder",
+      "event": "PreToolUse",
+      "tools": ["apply_patch"],
+      "command": "echo Quality reminder: keep non-Markdown lines <= 140 and avoid suppression directives."
+    }
+  ]
+}

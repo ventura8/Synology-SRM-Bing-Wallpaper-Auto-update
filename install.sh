@@ -1,7 +1,6 @@
 #!/bin/sh
 # Installer for Synology SRM 1.3 Bing Wallpaper Script
 
-
 main() {
     USER_ID=$(id -u)
     if [ "$USER_ID" -ne 0 ]; then
@@ -19,10 +18,17 @@ main() {
             read -r "$@"
         else
             # Try to read from /dev/tty. If it fails (e.g. no device in container), fallback to stdin.
-            if ! { read -r "$@" < /dev/tty; } 2>/dev/null; then
+            if ! { read -r "$@" </dev/tty; } 2>/dev/null; then
                 read -r "$@"
             fi
         fi
+    }
+
+    can_prompt() {
+        if [ -n "$NON_INTERACTIVE" ]; then
+            return 1
+        fi
+        [ -t 0 ] || [ -c /dev/tty ] || [ -n "$FORCE_INTERACTIVE" ]
     }
 
     if [ -n "$LOCAL_INSTALL_PATH" ]; then
@@ -44,21 +50,21 @@ main() {
         RESOLUTION="$BING_RESOLUTION"
         echo "Using pre-set resolution: $RESOLUTION"
     else
-        RESOLUTION="4k"  # Default
-        if { [ -t 0 ] || [ -c /dev/tty ] || [ -n "$FORCE_INTERACTIVE" ]; } && [ -z "$NON_INTERACTIVE" ]; then
+        RESOLUTION="4k" # Default
+        if can_prompt; then
             echo ""
             echo "Choose image resolution:"
             echo "  [1] 4K (UHD) - Default"
             echo "  [2] 1080p (FHD)"
             printf "Enter choice [1]: "
             read_input RES_CHOICE
-            
+
             case "$RES_CHOICE" in
                 2)
                     RESOLUTION="1080p"
                     echo "Selected: 1080p"
                     ;;
-                1|"")
+                1 | "")
                     RESOLUTION="4k"
                     echo "Selected: 4K"
                     ;;
@@ -73,14 +79,13 @@ main() {
     # Apply resolution to downloaded script
     sed -i "s/BING_RESOLUTION=\".*\"/BING_RESOLUTION=\"$RESOLUTION\"/" "$INSTALL_PATH"
 
-
     # --- Interactive Region Selection ---
     if [ -n "$BING_MARKET" ]; then
         REGION="$BING_MARKET"
         echo "Using pre-set region: $REGION"
     else
         REGION="en-WW" # Default
-        if { [ -t 0 ] || [ -c /dev/tty ] || [ -n "$FORCE_INTERACTIVE" ]; } && [ -z "$NON_INTERACTIVE" ]; then
+        if can_prompt; then
             echo ""
             echo "Choose Bing Region:"
             echo "  [1] en-WW (Worldwide) - Default"
@@ -109,19 +114,18 @@ main() {
     fi
     sed -i "s/BING_MARKET=\".*\"/BING_MARKET=\"$REGION\"/" "$INSTALL_PATH"
 
-
     # --- Interactive Text Overlay Selection ---
     if [ -n "$BURN_TEXT_OVERLAY" ]; then
         OVERLAY="$BURN_TEXT_OVERLAY"
         echo "Using pre-set text overlay setting: $OVERLAY"
     else
         OVERLAY="true" # Default
-        if { [ -t 0 ] || [ -c /dev/tty ] || [ -n "$FORCE_INTERACTIVE" ]; } && [ -z "$NON_INTERACTIVE" ]; then
+        if can_prompt; then
             echo ""
             printf "Enable Text Overlay (Title & Copyright)? [Y/n]: "
             read_input OVERLAY_CHOICE
             case "$OVERLAY_CHOICE" in
-                [nN][oO]|[nN])
+                [nN][oO] | [nN])
                     OVERLAY="false"
                     echo "Selected Overlay: Disabled"
                     ;;
@@ -133,7 +137,6 @@ main() {
         fi
     fi
     sed -i "s/BURN_TEXT_OVERLAY=.*/BURN_TEXT_OVERLAY=$OVERLAY/" "$INSTALL_PATH"
-
 
     chmod +x "$INSTALL_PATH"
     echo "Installed to: $INSTALL_PATH"
@@ -149,13 +152,13 @@ main() {
 
     # Interactive Prompt for Time
     # We use /dev/tty because the script is often piped via wget
-    if { [ -t 0 ] || [ -c /dev/tty ] || [ -n "$FORCE_INTERACTIVE" ]; } && [ -z "$NON_INTERACTIVE" ]; then
+    if can_prompt; then
         echo "-------------------------------------------------------"
         printf "Default schedule is set to %02d:%02d daily.\n" "$DEF_HOUR" "$DEF_MIN"
         printf "Do you want to change the time? [y/N] "
         read_input RESPONSE
         case "$RESPONSE" in
-            [yY][eE][sS]|[yY])
+            [yY][eE][sS] | [yY])
                 while true; do
                     printf "Enter Hour (0-23): "
                     read_input NEW_HOUR
@@ -203,7 +206,7 @@ main() {
     fi
 
     # 2. Append new job
-    printf "%b\n" "$CRON_JOB" >> "$CRON_FILE"
+    printf "%b\n" "$CRON_JOB" >>"$CRON_FILE"
     printf "Added to %s (Schedule: %02d:%02d)\n" "$CRON_FILE" "$HOUR" "$MIN"
 
     # 3. Restart cron service

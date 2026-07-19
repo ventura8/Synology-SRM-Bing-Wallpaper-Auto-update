@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Synology SRM 1.3 Bing Daily Wallpaper Script
-# 
+#
 # Description:
 # This script downloads the daily Bing wallpaper and updates the SRM login screen.
 # It is adapted for Synology Router Manager (SRM) 1.3.
@@ -10,13 +10,6 @@
 # Usage:
 # Run this script as root or via Task Scheduler (User: root).
 # ==============================================================================
-
-# Check for root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "Error: This script must be run as root."
-    echo "Try: sudo $0"
-    exit 1
-fi
 
 # --- Configuration ---
 
@@ -107,12 +100,12 @@ main() {
     FULL_COPYRIGHT=$(echo "$JSON" | grep -o '"copyright":"[^"]*"' | cut -d'"' -f4)
 
     # Extract Title: Everything before the " ("
-    TITLE="${FULL_COPYRIGHT%% (*}"  # Everything before ' ('
+    TITLE="${FULL_COPYRIGHT%% (*}" # Everything before ' ('
 
     # Extract Copyright Credit: Everything inside the last parentheses
     COPYRIGHT="${FULL_COPYRIGHT#* (}"
     COPYRIGHT="${COPYRIGHT%)}"
-    
+
     if [ -z "$URL_PART" ]; then
         echo "Error: Could not extract wallpaper URL."
         exit 1
@@ -124,7 +117,10 @@ main() {
 
     # --- Step 2: Download Image ---
     wget -t 5 --user-agent="Mozilla/5.0" --no-check-certificate "$PIC_URL" -qO "$TMP_FILE"
-    [ -s "$TMP_FILE" ] || { echo "Error: Download failed."; exit 1; }
+    [ -s "$TMP_FILE" ] || {
+        echo "Error: Download failed."
+        exit 1
+    }
 
     # Create a copy for the login screen (which might get text overlay)
     cp -f "$TMP_FILE" "$TMP_LOGIN_FILE"
@@ -132,12 +128,12 @@ main() {
     # --- Step 2.5: Burn Text Overlay (Optional - Login Screen ONLY) ---
     if [ "$BURN_TEXT_OVERLAY" = "true" ] && which convert >/dev/null 2>&1; then
         echo "Adding text overlay to login wallpaper..."
-        
+
         # Download a standalone font to bypass system font config errors
         # Use JSDelivr (reliable GitHub proxy) to get Lato-Bold from Google Fonts repo
         FONT_URL="https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/lato/Lato-Bold.ttf"
         FONT_FILE="/tmp/Lato-Bold.ttf"
-        
+
         # Check if we need to download (or if file is too small < 10KB)
         if [ ! -f "$FONT_FILE" ] || [ "$(du -k "$FONT_FILE" | cut -f1)" -lt 10 ]; then
             echo "Downloading font for overlay..."
@@ -155,20 +151,20 @@ main() {
             echo "Error: Downloaded font appears to be HTML. Removing..."
             rm -f "$FONT_FILE"
         fi
-        
+
         if [ -s "$FONT_FILE" ]; then
             # Add text overlay using ImageMagick with explicit font file
             # Use a temporary output file to avoid read/write conflicts
             TMP_OVERLAY="/tmp/bing_overlay_output.jpg"
-            
+
             if which identify >/dev/null 2>&1; then
                 # Safe identify with stderr suppression
                 W=$(identify -format "%w" "$TMP_LOGIN_FILE" 2>/dev/null)
             fi
-            
+
             # Validate W is a number, otherwise default
-            case $W in 
-                ''|*[!0-9]*) WIDTH=3840 ;;
+            case $W in
+                '' | *[!0-9]*) WIDTH=3840 ;;
                 *) WIDTH=$W ;;
             esac
 
@@ -183,10 +179,10 @@ main() {
             PADDING=25
 
             echo "Calculated Margin: $MARGIN_X, Max Box Width: $BOX_WIDTH"
-            
+
             # Method: Responsive Text Generation (Safe Trim)
             # Uses 'BorderGuard' to allow shrinking without clipping
-            
+
             TMP_TITLE="/tmp/bing_title.png"
             TMP_COPY="/tmp/bing_copy.png"
             TMP_BOX="/tmp/bing_combined.png"
@@ -207,7 +203,7 @@ main() {
                 -bordercolor "rgba(0,0,0,0)" -border 20 \
                 -trim +repage \
                 "$TMP_COPY"
-            
+
             # Combine them vertically
             # Align Left (West)
             convert "$TMP_TITLE" "$TMP_COPY" -background "rgba(0,0,0,0)" -gravity West -append \
@@ -215,14 +211,14 @@ main() {
                 -background "rgba(0,0,0,0.5)" -flatten \
                 +repage \
                 "$TMP_BOX"
-                
+
             # Composite onto main image
             # Revert to NorthWest (Top-Left) for reliability, using calculated center.
             if [ -s "$TMP_BOX" ]; then
                 BOX_REAL_W=$(convert "$TMP_BOX" -format "%w" info: | tr -cd '0-9')
                 # Fallback if measurement fails
-                case $BOX_REAL_W in ''|*[!0-9]*) BOX_REAL_W=400 ;; esac
-                
+                case $BOX_REAL_W in '' | *[!0-9]*) BOX_REAL_W=400 ;; esac
+
                 # User requested: Offset left by HALF width (Align Right Edge to Center)
                 OFFSET=$((BOX_REAL_W / 2))
 
@@ -232,10 +228,10 @@ main() {
                 convert "$TMP_LOGIN_FILE" "$TMP_BOX" \
                     -gravity Center -geometry -${OFFSET}+0 -composite \
                     "$TMP_OVERLAY"
-                
+
                 rm -f "$TMP_TITLE" "$TMP_COPY" "$TMP_BOX"
             fi
-                
+
             if [ -s "$TMP_OVERLAY" ]; then
                 mv -f "$TMP_OVERLAY" "$TMP_LOGIN_FILE"
                 echo "Text overlay added (Login Screen Only): $TITLE | $COPYRIGHT"
@@ -293,16 +289,16 @@ main() {
     if [ -f /etc/synoinfo.conf ]; then
         # Set login_background_customize="yes" to force it to look at the custom file (Method A)
         sed -i s/login_background_customize=.*//g /etc/synoinfo.conf
-        echo "login_background_customize=\"yes\"" >> /etc/synoinfo.conf
+        echo "login_background_customize=\"yes\"" >>/etc/synoinfo.conf
         echo "Updated synoinfo.conf: login_background_customize=yes"
-        
+
         # Update Welcome Message if enabled
         if [ "$SET_WELCOME_MSG" = "true" ]; then
             sed -i s/login_welcome_title=.*//g /etc/synoinfo.conf
-            echo "login_welcome_title=\"$TITLE\"" >> /etc/synoinfo.conf
-            
+            echo "login_welcome_title=\"$TITLE\"" >>/etc/synoinfo.conf
+
             sed -i s/login_welcome_msg=.*//g /etc/synoinfo.conf
-            echo "login_welcome_msg=\"$COPYRIGHT\"" >> /etc/synoinfo.conf
+            echo "login_welcome_msg=\"$COPYRIGHT\"" >>/etc/synoinfo.conf
             echo "Updated login screen message: $TITLE"
             echo "Note: You may need to logout or refresh the login page to see changes."
         fi

@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$REPO_ROOT"
+
 # Internal Test Runner (runs inside Docker container)
 
 # Default to running all if no flags provided
@@ -56,21 +59,18 @@ run_bats_suite() {
     TYPE=$1
     PATTERN=$2
     shift 2
-    TEST_FILES="$*"
 
     echo "Running $TYPE Tests..."
 
     if [ "$COVERAGE" = "1" ]; then
         # Ensure kcov output dir exists
         mkdir -p "$COVERAGE_OUTPUT/$TYPE"
-        
-        # shellcheck disable=SC2086
+
         kcov --include-pattern="$PATTERN" \
-             "$COVERAGE_OUTPUT/$TYPE" \
-             bats $TEST_FILES
+            "$COVERAGE_OUTPUT/$TYPE" \
+            bats "$@"
     else
-        # shellcheck disable=SC2086
-        bats $TEST_FILES
+        bats "$@"
     fi
 }
 
@@ -100,12 +100,12 @@ if [ "$COVERAGE" = "1" ] && [ "$UNIT" = "true" ] && [ "$E2E" = "true" ]; then
     echo "Merging Coverage Reports..."
     mkdir -p "$COVERAGE_OUTPUT/final"
     kcov --merge "$COVERAGE_OUTPUT/final" \
-         "$COVERAGE_OUTPUT/unit/install" \
-         "$COVERAGE_OUTPUT/unit/uninstall" \
-         "$COVERAGE_OUTPUT/unit/wallpaper" \
-         "$COVERAGE_OUTPUT/component" \
-         "$COVERAGE_OUTPUT/e2e"
-    
+        "$COVERAGE_OUTPUT/unit/install" \
+        "$COVERAGE_OUTPUT/unit/uninstall" \
+        "$COVERAGE_OUTPUT/unit/wallpaper" \
+        "$COVERAGE_OUTPUT/component" \
+        "$COVERAGE_OUTPUT/e2e"
+
     if [ -f "$COVERAGE_OUTPUT/final/cobertura.xml" ]; then
         echo "Updating coverage badge..."
         python3 tests/transform_coverage.py "$COVERAGE_OUTPUT/final/cobertura.xml"

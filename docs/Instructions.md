@@ -6,11 +6,11 @@ The detailed documentation has been split into multiple files for easier navigat
 
 ## Documentation Index
 
-- [Project Overview & Directory Structure](docs/project_overview.md)
+- [Project Overview & Directory Structure](project_overview.md)
   - General project goals and file organization.
-- [Key Logic & Pipeline](docs/pipeline_logic.md)
+- [Key Logic & Pipeline](pipeline_logic.md)
   - Detailed explanation of the wallpaper update process and SRM integration.
-- [Development & Standards](docs/development_standards.md)
+- [Development & Standards](development_standards.md)
   - Environment setup, testing, and coding standards (including mandatory 90% coverage).
-- [Configuration](docs/configuration.md)
+- [Configuration](configuration.md)
   - `bing_wallpaper_auto_update.sh` configuration options.
