@@ -24,9 +24,8 @@ if [[ "$@" == *"HPImageArchive.aspx"* ]]; then
     # Return valid JSON for Bing API
     echo '{"images":[{"startdate":"20230101","urlbase":"/th?id=OHR.TestImage","copyright":"Test Copyright (c) Provider"}]}'
 elif [[ "$@" == *".jpg" ]]; then
-    # Create dummy image
-    touch /tmp/mock_image.jpg
-    echo "mock_binary_data" > /tmp/mock_image.jpg
+    # Minimal JPEG (SOI + JFIF + EOI) so magic-byte validation passes
+    printf '\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9' >/tmp/mock_image.jpg
     # If output is directed to stdout (captured by variable), cat it?
     # No, script uses -O "$TMP_FILE".
     # We need to handle -O argument.
@@ -44,9 +43,9 @@ elif [[ "$@" == *".jpg" ]]; then
     done
     
     if [ -n "$OUTPUT_FILE" ] && [ "$OUTPUT_FILE" != "-" ]; then
-        echo "mock_binary_data" > "$OUTPUT_FILE"
+        cp /tmp/mock_image.jpg "$OUTPUT_FILE"
     else
-        echo "mock_binary_data"
+        cat /tmp/mock_image.jpg
     fi
 else
     # Default success

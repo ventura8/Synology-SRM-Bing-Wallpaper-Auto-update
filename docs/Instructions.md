@@ -1,16 +1,18 @@
 # AI Instructions: Synology SRM Bing Wallpaper Auto-update
 
-This document provides technical guidance for AI agents and developers working on this project.
+This document indexes technical guidance for AI agents and developers.
 
-The detailed documentation has been split into multiple files for easier navigation and modularity.
+Canonical agent rules: [`../AGENTS.md`](../AGENTS.md)  
+Project skills: [`../.agents/skills/`](../.agents/skills/)
 
 ## Documentation Index
 
 - [Project Overview & Directory Structure](project_overview.md)
   - General project goals and file organization.
 - [Key Logic & Pipeline](pipeline_logic.md)
-  - Detailed explanation of the wallpaper update process and SRM integration.
+  - Wallpaper update process and SRM integration.
 - [Development & Standards](development_standards.md)
   - Environment setup, testing, and coding standards (including mandatory 90% coverage).
 - [Configuration](configuration.md)
   - `bing_wallpaper_auto_update.sh` configuration options.
+- [Release notes](releases/v1.0.2.md) (prior: [v1.0.1](releases/v1.0.1.md))

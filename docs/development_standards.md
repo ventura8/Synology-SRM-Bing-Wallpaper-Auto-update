@@ -1,5 +1,9 @@
 # Development & Standards
 
+Canonical agent rules and skill workflows: [`../AGENTS.md`](../AGENTS.md).
+
+**Current release:** [v1.0.2](releases/v1.0.2.md)
+
 ## Mandatory Quality Flow
 
 Every change must pass this order, locally and in CI:
@@ -49,7 +53,10 @@ CI must follow the same mandatory order and gates.
 - **Shell Scripting**: Follow `ShellCheck` recommendations.
 - **Compatibility**: Ensure scripts are compatible with the restricted shell environment of Synology SRM (mostly BusyBox/Ash based, but some GNU tools are available).
 - **Paths**: Use dynamic path discovery for SRM resource locations as they may vary between minor versions.
-- **Cleanup**: Ensure temporary downloaded files are cleaned up after processing.
+- **Cleanup**: Temp downloads must use a private `mktemp -d` workdir with trap cleanup (never predictable world-writable `/tmp` paths).
+- **Downloads**: Keep TLS certificate verification enabled on all `wget` calls; never use `--no-check-certificate`.
+- **Content validation**: Reject non-JPEG payloads (SOI magic) before ImageMagick or system wallpaper writes.
+- **Archive safety**: Sanitize archive dates to exactly eight digits (`YYYYMMDD`) before building archive paths.
 - **Documentation**: Update `README.md` and documentation in `docs/` when introducing new features or changing logic.
 
 ## CI and Dependency Pinning

@@ -194,7 +194,13 @@ teardown() {
 }
 
 @test "Script should set login welcome message if enabled" {
-    sed -i 's/SET_WELCOME_MSG=false/SET_WELCOME_MSG=true/' "$SCRIPT"
+    original_welcome_setting="$(grep '^SET_WELCOME_MSG=' "$SCRIPT")"
+    restore_welcome_setting() {
+        sed -i "s/^SET_WELCOME_MSG=.*/${original_welcome_setting}/" "$SCRIPT"
+    }
+    trap restore_welcome_setting RETURN
+
+    sed -i 's/^SET_WELCOME_MSG=.*/SET_WELCOME_MSG=true/' "$SCRIPT"
 
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
@@ -274,7 +280,45 @@ EOT
     # So we don't strictly need to restore, but it's good practice inside the test if we had steps after.
 
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Error: Download failed."* ]]
+    [[ "$output" == *"Error: Download failed"* ]]
+}
+
+@test "Script should reject non-JPEG image payload before SRM writes" {
+    # Serve a non-JPEG body for the image download; API still returns valid JSON.
+    cat <<EOT >/tmp/bin/wget
+#!/bin/bash
+if [[ "\$@" == *"HPImageArchive.aspx"* ]]; then
+    cat /tmp/mock_response.json
+    exit 0
+fi
+if [[ "\$@" == *".jpg"* ]]; then
+    OUTPUT=""
+    while [[ "\$#" -gt 0 ]]; do
+        case "\$1" in
+            -O|-qO) OUTPUT="\$2"; shift ;;
+        esac
+        shift
+    done
+    if [ -n "\$OUTPUT" ] && [ "\$OUTPUT" != "-" ]; then
+        printf 'not-a-jpeg' >"\$OUTPUT"
+    else
+        printf 'not-a-jpeg'
+    fi
+    exit 0
+fi
+exit 0
+EOT
+    chmod +x /tmp/bin/wget
+
+    # Marker file that must remain untouched if rejection works before deploy
+    BEFORE_HASH=$(md5sum /usr/syno/etc/login_background.jpg | awk '{print $1}')
+
+    run bash "$SCRIPT"
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"JPEG SOI"* ]]
+    AFTER_HASH=$(md5sum /usr/syno/etc/login_background.jpg | awk '{print $1}')
+    [ "$BEFORE_HASH" = "$AFTER_HASH" ]
 }
 
 @test "Script should handle ImageMagick measurement failure (Fallback width)" {
@@ -355,18 +399,21 @@ EOT
 }
 
 @test "Script should detect HTML font file (Corrupt Download)" {
+    FONT_CACHE="/usr/local/share/bing-wallpaper/Lato-Bold.ttf"
+    mkdir -p /usr/local/share/bing-wallpaper
+
     # Create valid-looking but corrupt HTML file LARGER than 10KB to skip download trigger
     # 15KB file
-    dd if=/dev/zero of=/tmp/Lato-Bold.ttf bs=1024 count=15 2>/dev/null
+    dd if=/dev/zero of="$FONT_CACHE" bs=1024 count=15 2>/dev/null
     # Overwrite start with HTML tag
-    printf "<html>" | dd of=/tmp/Lato-Bold.ttf conv=notrunc 2>/dev/null
+    printf "<html>" | dd of="$FONT_CACHE" conv=notrunc 2>/dev/null
 
     # Run script
     run bash "$SCRIPT"
 
     # Should warn and remove
     [[ "$output" == *"appears to be HTML"* ]]
-    [ ! -f "/tmp/Lato-Bold.ttf" ]
+    [ ! -f "$FONT_CACHE" ]
 }
 
 @test "Script should handle non-numeric Image Width" {

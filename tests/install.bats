@@ -42,7 +42,8 @@ if [[ "\$@" == *"bing_wallpaper_auto_update.sh"* ]]; then
     exit 0
 fi
 if [[ "\$@" == *".jpg"* ]]; then
-    echo "mock_binary_data" > /tmp/mock_image.jpg
+    # Minimal JPEG (SOI + JFIF + EOI) so magic-byte validation passes
+    printf '\\xff\\xd8\\xff\\xe0\\x00\\x10JFIF\\x00\\x01\\x01\\x00\\x00\\x01\\x00\\x01\\x00\\x00\\xff\\xd9' >/tmp/mock_image.jpg
     OUTPUT=""
     while [[ "\$#" -gt 0 ]]; do
         case "\$1" in
