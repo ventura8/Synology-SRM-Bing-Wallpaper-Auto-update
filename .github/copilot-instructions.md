@@ -1,5 +1,7 @@
 # Copilot Instructions
 
+Canonical project rules: [`../AGENTS.md`](../AGENTS.md).
+
 ## Project Focus
 
 - Maintain compatibility with Synology SRM 1.3 shell environments.
@@ -21,7 +23,7 @@
 
 ## Shell and Test Practices
 
-- Prefer portable shell patterns and defensive quoting.
+- Prefer portable POSIX shell patterns and defensive quoting in product scripts.
 - Keep behavior in install and wallpaper flows verified by BATS tests.
 - Keep mocks deterministic and avoid external network dependency in tests.
 
@@ -30,3 +32,8 @@
 - Pin GitHub actions to immutable SHAs.
 - Pin external tools to explicit stable versions.
 - Keep CI changes aligned with local quality commands.
+
+## Agent Docs
+
+- When invariants change, update `AGENTS.md` and `.agents/skills/` (and mirrors
+  under `.github/skills/`) in the same change set.

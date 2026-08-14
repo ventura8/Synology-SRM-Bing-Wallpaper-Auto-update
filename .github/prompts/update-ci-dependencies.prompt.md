@@ -1,11 +1,12 @@
 ---
 mode: ask
-description: "Update CI dependencies to latest stable immutable pins and validate pipeline integrity."
+description: "Upgrade CI dependencies with immutable pins and validate the pipeline."
 ---
 
-Audit workflow and tool dependencies, then:
+Follow root `AGENTS.md` and `.agents/skills/ci-dependency-upgrade/SKILL.md`.
 
-1. Upgrade each dependency to the latest stable final release.
-2. Pin actions to immutable SHAs.
-3. Keep tool versions explicit and reproducible.
-4. Validate the workflow syntax and dependency installation flow.
+1. Inventory pins in `.github/workflows/ci.yml` and related runners.
+2. Resolve latest stable SHAs/tags/versions upstream.
+3. Update pins with version comments; keep local/CI alignment.
+4. Run quality checks and representative Docker tests.
+5. Summarize bumps and any intentional skew left behind.

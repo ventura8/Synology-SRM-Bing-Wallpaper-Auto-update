@@ -1,11 +1,13 @@
 ---
 mode: ask
-description: "Add or update BATS tests for installer, wallpaper, and end-to-end behavior."
+description: "Add or strengthen deterministic BATS coverage for shell behavior."
 ---
 
-When extending tests:
+Follow root `AGENTS.md` and `.agents/skills/test-runner/SKILL.md`.
 
-1. Keep mocks deterministic and file-backed.
-2. Cover normal flow, fallback flow, and failure handling.
-3. Preserve compatibility with coverage collection.
-4. Keep tests readable and line-length compliant.
+1. Identify uncovered or weakly asserted behavior in install, uninstall, or wallpaper flows.
+2. Add deterministic BATS tests with local mocks only (no live Bing network).
+   Cover accepted inputs, fallback behavior, and rejected/failure inputs.
+3. Do not mock owned product scripts.
+4. Re-run quality and the relevant test slices; keep total repository coverage ≥90%.
+5. Update agent docs if a new invariant emerges.

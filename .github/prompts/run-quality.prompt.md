@@ -3,6 +3,8 @@ mode: ask
 description: "Run the full mandatory quality suite and fix findings without suppressions."
 ---
 
+Follow root `AGENTS.md` and `.agents/skills/pipeline-runner/SKILL.md`.
+
 Run the project quality pipeline end-to-end:
 
 1. Run formatting checks first.
@@ -12,3 +14,4 @@ Run the project quality pipeline end-to-end:
 5. Summarize changed files and remaining risks last.
 
 All repository quality checks are mandatory both locally and in CI, including tests and coverage enforcement.
+Do not add lint suppressions.

@@ -1,6 +1,8 @@
 # Synology SRM 1.3 Bing Wallpaper Auto-Update
 
-[![Script](https://img.shields.io/badge/Script-Shell-blue.svg)](https://github.com/ventura8/Synology-SRM-Bing-Wallpaper-Auto-update) ![Coverage](assets/coverage.svg)
+[![Script](https://img.shields.io/badge/Script-Shell-blue.svg)](https://github.com/ventura8/Synology-SRM-Bing-Wallpaper-Auto-update)
+[![Release](https://img.shields.io/badge/release-v1.0.2-blue.svg)](docs/releases/v1.0.2.md)
+![Coverage](assets/coverage.svg)
 
 Automatically downloads the daily Bing wallpaper and sets it as the login background and default wallpaper on Synology SRM 1.3 (Router Manager).
 
@@ -18,8 +20,9 @@ wget -qO- https://raw.githubusercontent.com/ventura8/Synology-SRM-Bing-Wallpaper
 - **Automated Scheduling**: Automatically sets up a daily cron job (no GUI required).
 - **Smart Detection**: Dynamically finds and updates the correct wallpaper resource file.
 - **4K Support**: Downloads high-resolution UHD images.
+- **Safe Downloads**: TLS certificate verification stays enabled; image downloads are checked for JPEG magic bytes before deployment to system wallpaper files.
 - **Metadata**: Extracts Title and Copyright info (Optionally sets them as welcome message - *Requires configuring synoinfo*).
-- **Archiving**: Option to save a history of wallpapers.
+- **Archiving**: Option to save a history of wallpapers (dates validated as `YYYYMMDD`).
 
 ## 📸 Screenshots
 
@@ -133,6 +136,7 @@ This script modifies system files (`/usr/syno/etc/login_background.jpg`). Use at
 ## Developer Quality Gates
 
 This repository enforces mandatory quality checks both locally and in CI.
+Canonical agent rules: [`AGENTS.md`](AGENTS.md).
 
 Order of execution:
 

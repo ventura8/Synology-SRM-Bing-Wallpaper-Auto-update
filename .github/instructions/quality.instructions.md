@@ -8,3 +8,5 @@ description: "Use when working on repository-wide quality standards, lint/format
 - Keep non-Markdown files at max 140 columns.
 - Reject changes that introduce lint suppressions.
 - Prefer explicit version pinning for tools and CI dependencies.
+- Prefer `./tools/runners/quality.sh` and Dockerized `run_tests.sh`.
+- Update `AGENTS.md` when gates or invariants change.

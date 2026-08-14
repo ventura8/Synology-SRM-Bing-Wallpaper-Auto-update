@@ -1,5 +1,6 @@
 #!/bin/sh
 # Installer for Synology SRM 1.3 Bing Wallpaper Script
+# Version: 1.0.2
 
 main() {
     USER_ID=$(id -u)
@@ -12,6 +13,8 @@ main() {
     SCRIPT_NAME="bing_wallpaper_auto_update.sh"
     INSTALL_DIR="/usr/local/bin"
     INSTALL_PATH="$INSTALL_DIR/$SCRIPT_NAME"
+    # Stage downloads so a failed wget cannot truncate an existing install
+    STAGE_FILE="$INSTALL_DIR/$SCRIPT_NAME.staging.$$"
 
     read_input() {
         if [ -t 0 ] || [ -n "$FORCE_STDIN" ] || [ -n "$FORCE_INTERACTIVE" ]; then
@@ -33,13 +36,19 @@ main() {
 
     if [ -n "$LOCAL_INSTALL_PATH" ]; then
         echo "Installing from local source: $LOCAL_INSTALL_PATH"
-        cp "$LOCAL_INSTALL_PATH" "$INSTALL_PATH"
+        cp "$LOCAL_INSTALL_PATH" "$STAGE_FILE"
     else
         echo "Downloading SRM Wallpaper Script..."
-        wget -t 5 --no-cache --no-check-certificate "$REPO_URL/$SCRIPT_NAME" -qO "$INSTALL_PATH"
+        if ! wget -t 5 --no-cache "$REPO_URL/$SCRIPT_NAME" -qO "$STAGE_FILE"; then
+            rm -f "$STAGE_FILE"
+            echo "Error: Download failed. If this is a certificate error, update the router CA store"
+            echo "or install offline with LOCAL_INSTALL_PATH=/path/to/bing_wallpaper_auto_update.sh"
+            exit 1
+        fi
     fi
 
-    if [ ! -s "$INSTALL_PATH" ]; then
+    if [ ! -s "$STAGE_FILE" ]; then
+        rm -f "$STAGE_FILE"
         echo "Error: Download failed, file missing, or empty."
         exit 1
     fi
@@ -76,8 +85,8 @@ main() {
         fi
     fi
 
-    # Apply resolution to downloaded script
-    sed -i "s/BING_RESOLUTION=\".*\"/BING_RESOLUTION=\"$RESOLUTION\"/" "$INSTALL_PATH"
+    # Apply resolution to staged script
+    sed -i "s/BING_RESOLUTION=\".*\"/BING_RESOLUTION=\"$RESOLUTION\"/" "$STAGE_FILE"
 
     # --- Interactive Region Selection ---
     if [ -n "$BING_MARKET" ]; then
@@ -112,7 +121,7 @@ main() {
             echo "Selected Region: $REGION"
         fi
     fi
-    sed -i "s/BING_MARKET=\".*\"/BING_MARKET=\"$REGION\"/" "$INSTALL_PATH"
+    sed -i "s/BING_MARKET=\".*\"/BING_MARKET=\"$REGION\"/" "$STAGE_FILE"
 
     # --- Interactive Text Overlay Selection ---
     if [ -n "$BURN_TEXT_OVERLAY" ]; then
@@ -136,9 +145,10 @@ main() {
             esac
         fi
     fi
-    sed -i "s/BURN_TEXT_OVERLAY=.*/BURN_TEXT_OVERLAY=$OVERLAY/" "$INSTALL_PATH"
+    sed -i "s/BURN_TEXT_OVERLAY=.*/BURN_TEXT_OVERLAY=$OVERLAY/" "$STAGE_FILE"
 
-    chmod +x "$INSTALL_PATH"
+    chmod +x "$STAGE_FILE"
+    mv -f "$STAGE_FILE" "$INSTALL_PATH"
     echo "Installed to: $INSTALL_PATH"
 
     # --- Cron Automation ---
