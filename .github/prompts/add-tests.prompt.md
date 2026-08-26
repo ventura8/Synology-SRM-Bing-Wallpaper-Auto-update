@@ -10,4 +10,5 @@ Follow root `AGENTS.md` and `.agents/skills/test-runner/SKILL.md`.
    Cover accepted inputs, fallback behavior, and rejected/failure inputs.
 3. Do not mock owned product scripts.
 4. Re-run quality and the relevant test slices; keep total repository coverage ≥90%.
-5. Update agent docs if a new invariant emerges.
+5. Update all relevant markdown in the same change set when tests or behavior change
+   (see **Always Update Relevant Markdown** in `AGENTS.md`).

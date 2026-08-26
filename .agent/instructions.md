@@ -37,8 +37,15 @@ These short instructions apply to any automated coding assistant working here.
 - Support Linux-primary Docker workflows and Windows-hosted `run_tests.ps1`.
 - Respect LF vs CRLF via `.gitattributes` / `.editorconfig`.
 
-## 4. Keep Agent Docs Current
+## 4. Keep All Relevant Markdown Current
 
-When behavior or gates change, update `AGENTS.md` and affected
-`.agents/skills/*/SKILL.md` in the same change set (see **Always Update Agent
-Docs** in `AGENTS.md`).
+On **every** task, update every markdown file that would otherwise describe stale
+behavior, commands, gates, or pins — in the **same change set** as the code change.
+
+Minimum surfaces when applicable:
+
+- `AGENTS.md` and affected `.agents/skills/*/SKILL.md`
+- Copilot mirrors under `.github/` (skills, instructions, prompts, `copilot-instructions.md`)
+- Human docs: `README.md`, `docs/*` (overview, pipeline, standards, releases)
+
+See **Always Update Relevant Markdown** in `AGENTS.md` for the full checklist.

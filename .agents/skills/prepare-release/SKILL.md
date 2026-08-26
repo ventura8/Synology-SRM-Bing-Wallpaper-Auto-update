@@ -78,7 +78,9 @@ Include compare link `vPREV...vX.Y.Z` when useful.
 2. Update the three public script Version headers.
 3. Write `docs/releases/vX.Y.Z.md`.
 4. Sync README badge + docs current-release pointers.
-5. Update pipeline/standards docs when product invariants changed.
+5. Update all relevant markdown touched by the release (see **Always Update Relevant
+   Markdown** in `AGENTS.md`), including pipeline/standards docs when product
+   invariants changed.
 
 ### 4) Hygiene checklist (release-hygiene)
 
@@ -105,8 +107,26 @@ grep -n "vX.Y.Z" README.md docs/project_overview.md docs/development_standards.m
 4. Do not amend/commit/tag/push/`gh release create` without an explicit ask.
 5. Prefer running `pipeline-runner` before tagging if tests were not just validated.
 
+## Tagging triggers the GitHub Release (automated, do not hand-run `gh release create`)
+
+Once `VERSION` and `docs/releases/vX.Y.Z.md` are committed on the branch that will
+become `main`, the only remaining step to publish is creating and pushing the tag:
+
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+`.github/workflows/release.yml` fires on that `v*` tag push, verifies `VERSION`
+matches the tag and `docs/releases/vX.Y.Z.md` exists with a non-empty H1 that
+starts with the tag plus a non-empty body, installs a pinned `gh` CLI, then runs
+`gh release create --verify-tag` with the notes file's H1 as the title and the rest
+as the body (`--verify-tag` fails closed if the remote tag is gone). Only tag/push
+when the user explicitly asks — this publishes a public release.
+
 ## Output to the user
 
 1. Parsed version + branch + `VERSION` contents
 2. Paths updated
-3. Whether commit / tag / `gh release create` is still pending
+3. Whether commit / tag+push is still pending (tagging publishes automatically via
+   `release.yml` — no manual `gh release create`)

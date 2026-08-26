@@ -33,7 +33,11 @@ Canonical project rules: [`../AGENTS.md`](../AGENTS.md).
 - Pin external tools to explicit stable versions.
 - Keep CI changes aligned with local quality commands.
 
-## Agent Docs
+## Agent and Human Docs
 
-- When invariants change, update `AGENTS.md` and `.agents/skills/` (and mirrors
-  under `.github/skills/`) in the same change set.
+- On **every** task, update all relevant markdown in the same change set — not only
+  when “invariants change.”
+- Minimum: `AGENTS.md`, affected `.agents/skills/` and `.github/skills/` mirrors,
+  `.github/instructions/` / `.github/prompts/` when touched paths drift, plus human
+  docs under `README.md` and `docs/` when behavior or commands change.
+- Full checklist: **Always Update Relevant Markdown** in `AGENTS.md`.

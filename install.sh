@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installer for Synology SRM 1.3 Bing Wallpaper Script
-# Version: 1.0.2
+# Version: 1.0.3
 
 main() {
     USER_ID=$(id -u)

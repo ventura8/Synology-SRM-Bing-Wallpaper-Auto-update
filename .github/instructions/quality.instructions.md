@@ -9,4 +9,5 @@ description: "Use when working on repository-wide quality standards, lint/format
 - Reject changes that introduce lint suppressions.
 - Prefer explicit version pinning for tools and CI dependencies.
 - Prefer `./tools/runners/quality.sh` and Dockerized `run_tests.sh`.
-- Update `AGENTS.md` when gates or invariants change.
+- Update all relevant markdown in the same change set when gates, tools, or invariants
+  change (see **Always Update Relevant Markdown** in `AGENTS.md`).

@@ -2,7 +2,7 @@
 
 A shell-based automation suite for Synology SRM 1.3 that synchronizes the daily Bing wallpaper to the router's login screen and desktop.
 
-**Current release:** [v1.0.2](releases/v1.0.2.md)
+**Current release:** [v1.0.3](releases/v1.0.3.md)
 
 ## Directory Structure
 

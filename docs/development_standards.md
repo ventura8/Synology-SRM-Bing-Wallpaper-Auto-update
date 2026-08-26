@@ -2,7 +2,7 @@
 
 Canonical agent rules and skill workflows: [`../AGENTS.md`](../AGENTS.md).
 
-**Current release:** [v1.0.2](releases/v1.0.2.md)
+**Current release:** [v1.0.3](releases/v1.0.3.md)
 
 ## Mandatory Quality Flow
 
@@ -57,7 +57,9 @@ CI must follow the same mandatory order and gates.
 - **Downloads**: Keep TLS certificate verification enabled on all `wget` calls; never use `--no-check-certificate`.
 - **Content validation**: Reject non-JPEG payloads (SOI magic) before ImageMagick or system wallpaper writes.
 - **Archive safety**: Sanitize archive dates to exactly eight digits (`YYYYMMDD`) before building archive paths.
-- **Documentation**: Update `README.md` and documentation in `docs/` when introducing new features or changing logic.
+- **Documentation**: On every change, update all relevant markdown in the same change
+  set (`README.md`, `docs/*`, agent entrypoints/skills when rules or commands drift).
+  See **Always Update Relevant Markdown** in `AGENTS.md`.
 
 ## CI and Dependency Pinning
 

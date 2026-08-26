@@ -1,7 +1,7 @@
 # Synology SRM 1.3 Bing Wallpaper Auto-Update
 
 [![Script](https://img.shields.io/badge/Script-Shell-blue.svg)](https://github.com/ventura8/Synology-SRM-Bing-Wallpaper-Auto-update)
-[![Release](https://img.shields.io/badge/release-v1.0.2-blue.svg)](docs/releases/v1.0.2.md)
+[![Release](https://img.shields.io/badge/release-v1.0.3-blue.svg)](docs/releases/v1.0.3.md)
 ![Coverage](assets/coverage.svg)
 
 Automatically downloads the daily Bing wallpaper and sets it as the login background and default wallpaper on Synology SRM 1.3 (Router Manager).
