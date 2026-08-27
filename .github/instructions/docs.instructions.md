@@ -9,3 +9,6 @@ description: "Use when updating contributor or usage documentation for quality a
 - Human install one-liners stay interactive; do not put `NON_INTERACTIVE` in
   README quick starts.
 - Point agents to root `AGENTS.md` when documenting contributor/AI workflows.
+- On every edit, update all markdown that would otherwise describe stale behavior,
+  commands, gates, or pins in the same change set (see **Always Update Relevant
+  Markdown** in `AGENTS.md`).

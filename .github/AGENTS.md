@@ -38,4 +38,5 @@ Use when bumping version everywhere and writing release notes. Skill:
 - Keep non-Markdown line length at 140 or fewer characters.
 - Do not add lint suppression directives.
 - Keep CI and local checks aligned.
-- Update `AGENTS.md` and skills when invariants change.
+- On every task, update all relevant markdown in the same change set (see **Always
+  Update Relevant Markdown** in `AGENTS.md`).

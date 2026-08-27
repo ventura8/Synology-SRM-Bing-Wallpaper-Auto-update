@@ -1,0 +1,88 @@
+name: "Release"
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*.[0-9]*.[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned GitHub CLI
+        env:
+          GH_VERSION: "2.98.0"
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" \
+            | tar -xz -C /tmp
+          sudo install -m 0755 "/tmp/gh_${GH_VERSION}_linux_amd64/bin/gh" /usr/local/bin/gh
+          gh --version
+
+      - name: Resolve tag and release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+
+          if ! echo "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid release tag (expected vX.Y.Z): ${tag}" >&2
+            exit 1
+          fi
+
+          notes_file="docs/releases/${tag}.md"
+
+          if [ ! -f "$notes_file" ]; then
+            echo "::error::Missing release notes: ${notes_file}" >&2
+            exit 1
+          fi
+
+          version_file_content="$(tr -d '[:space:]' < VERSION)"
+          if [ "$version_file_content" != "$tag" ]; then
+            echo "::error::VERSION file (${version_file_content}) does not match tag (${tag})" >&2
+            exit 1
+          fi
+
+          title="$(head -n1 "$notes_file" | sed -E 's/^#+[[:space:]]*//')"
+          if [ -z "$title" ]; then
+            echo "::error::Release notes H1 title is empty: ${notes_file}" >&2
+            exit 1
+          fi
+          case "$title" in
+            "$tag" | "$tag"\ -*) ;;
+            *)
+              echo "::error::Release notes H1 must start with tag (${tag}): got '${title}'" >&2
+              exit 1
+              ;;
+          esac
+
+          tail -n +2 "$notes_file" > release_body.md
+          if [ ! -s release_body.md ] || ! grep -Eq '[[:alnum:]]' release_body.md; then
+            echo "::error::Release notes body is empty: ${notes_file}" >&2
+            exit 1
+          fi
+
+          {
+            echo "tag=${tag}"
+            echo "notes_file=${notes_file}"
+            echo "title=${title}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.notes.outputs.tag }}
+          RELEASE_TITLE: ${{ steps.notes.outputs.title }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            --verify-tag \
+            --title "$RELEASE_TITLE" \
+            --notes-file release_body.md

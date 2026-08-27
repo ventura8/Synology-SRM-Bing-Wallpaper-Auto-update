@@ -28,6 +28,8 @@ under `.agents/skills/`, with Copilot-oriented mirrors under `.github/`.
 | `AGENTS.md` | Canonical project rules for any coding agent |
 | `.agents/skills/*/SKILL.md` | Task skills (quality, tests, install, PR review) |
 | `.agent/instructions.md` | Short AI-agnostic pointer into this file |
+| `CLAUDE.md` | Thin entrypoint for Claude Code (auto-loaded) |
+| `GEMINI.md` | Thin entrypoint for Gemini CLI (auto-loaded) |
 | `.github/AGENTS.md` | Specialist mode index for GitHub Copilot agents |
 | `.github/agents/*.agent.md` | Copilot specialist personas |
 | `.github/skills/*/SKILL.md` | Copilot skill mirrors (keep aligned with `.agents/skills`) |
@@ -36,9 +38,9 @@ under `.agents/skills/`, with Copilot-oriented mirrors under `.github/`.
 | `.github/copilot-instructions.md` | Repo-wide Copilot baseline |
 | `docs/Instructions.md` | Human/AI docs index into `docs/` |
 
-When behavior or gates change, update **this file** and any affected skill in the
-same change set. Keep `.github/` mirrors consistent when the Copilot surface would
-otherwise drift.
+On every task, update **this file**, any affected skill, and every other relevant
+markdown in the same change set. Keep `.github/` mirrors consistent when the Copilot
+surface would otherwise drift (see **Always Update Relevant Markdown** below).
 
 ## Code Style & Testing Enforcement
 
@@ -151,15 +153,35 @@ Image: `tests/Dockerfile` tagged `srm-mock`. CI and local runners need
     srm-mock bash ./tools/runners/run_tests.sh
   ```
 
-## Always Update Agent Docs
+## Always Update Relevant Markdown
 
-- On bug fixes and features, update agent markdown in the **same change set** when
-  rules, commands, invariants, or workflows change.
-- Update root `AGENTS.md` and relevant `.agents/skills/*/SKILL.md` files.
-- Mirror material changes into `.github/` agent/skill/instruction files when those
-  surfaces would otherwise be wrong.
-- Capture invariants and do/don't lessons — not a changelog dump.
-- Treat stale agent docs as incomplete work (same as missing tests).
+Every change set must keep **all relevant markdown** in sync with the code, config,
+and workflows you touched. Stale docs are incomplete work (same as missing tests).
+
+### When (always)
+
+- Apply on **every** task: bug fixes, features, refactors, dependency bumps, CI/workflow
+  changes, test additions, and release prep — not only on “big” changes.
+- Update docs in the **same change set** as the behavior or pin you changed.
+
+### What to update (as applicable)
+
+| Area | Paths |
+| --- | --- |
+| Canonical agent rules | `AGENTS.md` |
+| Agent entrypoints | `CLAUDE.md`, `GEMINI.md`, `.agent/instructions.md` |
+| Task skills | `.agents/skills/*/SKILL.md` |
+| Copilot mirrors | `.github/AGENTS.md`, `.github/copilot-instructions.md`, `.github/skills/*/SKILL.md`, `.github/instructions/*.instructions.md`, `.github/prompts/*.prompt.md` |
+| Human + AI docs | `README.md`, `docs/Instructions.md`, `docs/project_overview.md`, `docs/pipeline_logic.md`, `docs/development_standards.md`, `docs/configuration.md` |
+| Releases | `docs/releases/vX.Y.Z.md` when versioning or shipping |
+
+### How
+
+- Capture invariants, commands, gates, and do/don't lessons — not a changelog dump.
+- Do not duplicate long rule blocks across files; extend `AGENTS.md` once and patch
+  mirrors/entrypoints only where their surface would otherwise drift.
+- If a markdown file describes behavior you changed and you skip updating it, explain
+  why in the PR/commit summary.
 
 ## SRM Shell Invariants
 
@@ -230,10 +252,18 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
   - Docker `srm-mock` build/cache
   - parallel unit / component / e2e
   - merge coverage + ≥90% gate + complexity summary
+- Workflow: `.github/workflows/release.yml` — triggers on `v*` tag push. Requires
+  `VERSION` to already equal the tag and `docs/releases/<tag>.md` to already exist
+  (both are `prepare-release` skill outputs); fails closed otherwise. Notes file must
+  have a non-empty H1 that starts with the tag (e.g. `# v1.0.3 - …`) and a non-empty
+  body. Installs a pinned `gh` CLI, then runs `gh release create --verify-tag` (fails
+  if the remote tag is missing instead of creating one from the default branch) with
+  title = the notes file's H1 and body = the rest of the file — do not hand-write
+  `gh release create` for a tagged version; push the tag and let this workflow do it.
 - Pin GitHub Actions to **immutable commit SHAs** with version comments.
 - Pin external tools to explicit versions (examples currently used in CI):
   `ruff`, `yamllint`, `markdownlint-cli`, `shfmt` image tags, `shellcheck` image
-  tags, `PSScriptAnalyzer` RequiredVersion, pip bootstrap version.
+  tags, `PSScriptAnalyzer` RequiredVersion, pip bootstrap version, release-job `gh`.
 - Keep CI steps aligned with `tools/runners/quality.sh` and `run_tests.sh`.
   A local-only check that CI does not run (or the reverse) is incomplete work.
 - Prefer deterministic installs (`apt-get` packages, pinned pip/npm versions).
@@ -248,5 +278,7 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
 - **Full local pipeline** — skill `pipeline-runner`
 - **Prepare release** — skill `prepare-release` (version from branch; sync
   `VERSION`, script headers, `docs/releases/`, README/docs pointers)
+- **CI dependency upgrades** — skill `ci-dependency-upgrade` (Actions SHAs,
+  pip/npm/image pins, drift repair)
 - **PR comment resolution** — skill `resolve-pr-comments` (user-requested)
 - **CodeRabbit review/findings** — skill `review-with-coderabbit` (user-gated only)
