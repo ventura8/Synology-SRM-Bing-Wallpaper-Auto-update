@@ -55,17 +55,17 @@ RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
 
 # Install shfmt (pinned)
 RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
-    https://github.com/mvdan/sh/releases/download/v3.13.1/shfmt_v3.13.1_linux_amd64 \
+    https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64 \
       -o /usr/local/bin/shfmt \
     && chmod +x /usr/local/bin/shfmt
 
 # Install python lint tooling (pinned)
-RUN python3 -m pip install --no-cache-dir --break-system-packages \
-    ruff==0.16.4 \
+RUN python3 -m pip install --no-cache-dir --only-binary :all: --break-system-packages \
+    ruff==0.16.8 \
     yamllint==1.38.0
 
 # Install Node.js 22 (pinned; markdownlint-cli@0.49.1 requires >=22)
-ARG NODE_VERSION=22.23.2
+ARG NODE_VERSION=22.23.3
 RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1
@@ -75,12 +75,9 @@ RUN npm install --global markdownlint-cli@0.49.1
 
 # Build and Install kcov (pinned)
 RUN git clone --branch v43 --depth 1 https://github.com/SimonKagstrom/kcov.git /tmp/kcov \
-    && mkdir /tmp/kcov/build \
-    && cd /tmp/kcov/build \
-    && cmake .. \
-    && make \
-    && make install \
-    && cd / \
+    && cmake -S /tmp/kcov -B /tmp/kcov/build \
+    && cmake --build /tmp/kcov/build \
+    && cmake --install /tmp/kcov/build \
     && rm -rf /tmp/kcov
 
 # Fix for ImageMagick policy to allow text rendering
@@ -94,39 +91,26 @@ RUN dos2unix /app/*.sh /app/tools/runners/*.sh /app/tests/*.bats /app/tests/mock
     && chmod +x /app/*.sh /app/tools/runners/*.sh
 
 # --- Mock Synology SRM Filesystem ---
+# 1. Login background, 2. webman theme wallpapers, 3. HD pack resources,
+# 4. synoinfo config, 5. crontab, 6. binary location, 7. service manager mocks
+RUN mkdir -p /usr/syno/etc/ \
+        /usr/syno/sbin \
+        /usr/local/bin \
+        /usr/syno/synoman/webman/resources/images/default_wallpaper/ \
+        /usr/syno/synoman/webman/resources/images/theme/router/default_wallpaper/ \
+        /usr/syno/synoman/synohdpack/images/dsm/resources/images/default_wallpaper/ \
+        /usr/syno/synoman/synohdpack/images/dsm/resources/images/theme/router/default_wallpaper/ \
+    && touch /usr/syno/etc/login_background.jpg \
+        /usr/syno/synoman/webman/resources/images/default_wallpaper/01.jpg \
+        /usr/syno/synoman/webman/resources/images/theme/router/default_wallpaper/01.jpg \
+        /etc/crontab \
+    && printf 'login_background_customize="no"\n' > /etc/synoinfo.conf \
+    && printf '#!/bin/bash\necho "Mock synoservicectl: $*"\n' > /usr/syno/sbin/synoservicectl \
+    && printf '#!/bin/bash\necho "Mock synoservice: $*"\n' > /usr/bin/synoservice \
+    && chmod +x /usr/syno/sbin/synoservicectl /usr/bin/synoservice
 
-# 1. Login Background Path
-RUN mkdir -p /usr/syno/etc/ && touch /usr/syno/etc/login_background.jpg
-
-# 2. Webman Resources (Theme wallpapers)
-RUN mkdir -p /usr/syno/synoman/webman/resources/images/default_wallpaper/ \
-    && mkdir -p /usr/syno/synoman/webman/resources/images/theme/router/default_wallpaper/ \
-    && touch /usr/syno/synoman/webman/resources/images/default_wallpaper/01.jpg \
-    && touch /usr/syno/synoman/webman/resources/images/theme/router/default_wallpaper/01.jpg
-
-# 3. HD Pack Resources
-RUN mkdir -p /usr/syno/synoman/synohdpack/images/dsm/resources/images/default_wallpaper/ \
-    && mkdir -p /usr/syno/synoman/synohdpack/images/dsm/resources/images/theme/router/default_wallpaper/
-
-# 4. Synoinfo Config
-RUN echo 'login_background_customize="no"' > /etc/synoinfo.conf
-
-# 5. Crontab
-RUN touch /etc/crontab
-
-# 6. Binary Location
-RUN mkdir -p /usr/local/bin
-
-# 7. Add Synology sbin to PATH (SRM specific)
+# Add Synology sbin to PATH (SRM specific)
 ENV PATH="/usr/syno/sbin:${PATH}"
-
-# Mock 'synoservicectl' (SRM 1.3 Service Manager)
-RUN mkdir -p /usr/syno/sbin \
-    && echo '#!/bin/bash\necho "Mock synoservicectl: $*"' > /usr/syno/sbin/synoservicectl \
-    && chmod +x /usr/syno/sbin/synoservicectl
-
-# Mock 'synoservice' (Legacy/DSM) - Fallback
-RUN echo '#!/bin/bash\necho "Mock synoservice: $*"' > /usr/bin/synoservice && chmod +x /usr/bin/synoservice
 
 # Set working directory
 WORKDIR /app

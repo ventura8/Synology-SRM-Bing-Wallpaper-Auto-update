@@ -13,11 +13,23 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class FileMetrics:
+    """Coverage and complexity figures for one file in the Cobertura report."""
+
     filename: str
     covered: int
     valid: int
     coverage_rate: float
     complexity: float
+
+
+@dataclass(slots=True, frozen=True)
+class ComplexityPolicy:
+    """Target and hard-max complexity thresholds, per file and averaged across files."""
+
+    target_per_file: float
+    hard_max_per_file: float
+    target_avg: float
+    hard_max_avg: float
 
 
 SHELL_DECISION_PATTERN = re.compile(r"\b(if|elif|for|while|until|case)\b|&&|\|\|")
@@ -76,6 +88,7 @@ def _estimated_shell_complexity(file_path: Path) -> float:
 
 
 def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, float]]:
+    """Read per-file and overall metrics from a Cobertura XML file."""
     tree = ET.parse(cobertura_path)
     root = tree.getroot()
 
@@ -151,25 +164,23 @@ def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, fl
 def evaluate_complexity(
     file_metrics: list[FileMetrics],
     overall: dict[str, float],
-    target_per_file: float,
-    hard_max_per_file: float,
-    target_avg: float,
-    hard_max_avg: float,
+    policy: ComplexityPolicy,
 ) -> tuple[list[str], list[str]]:
+    """Split threshold breaches into warnings (over target) and violations (over hard max)."""
     warnings: list[str] = []
     violations: list[str] = []
 
     for item in file_metrics:
-        if item.complexity > hard_max_per_file:
-            violations.append(f"{item.filename} complexity {item.complexity:.2f} exceeds hard max {hard_max_per_file:.2f}")
-        elif item.complexity > target_per_file:
-            warnings.append(f"{item.filename} complexity {item.complexity:.2f} exceeds target {target_per_file:.2f}")
+        if item.complexity > policy.hard_max_per_file:
+            violations.append(f"{item.filename} complexity {item.complexity:.2f} exceeds hard max {policy.hard_max_per_file:.2f}")
+        elif item.complexity > policy.target_per_file:
+            warnings.append(f"{item.filename} complexity {item.complexity:.2f} exceeds target {policy.target_per_file:.2f}")
 
     avg_complexity = overall["average_complexity"]
-    if avg_complexity > hard_max_avg:
-        violations.append(f"Average complexity {avg_complexity:.2f} exceeds hard max {hard_max_avg:.2f}")
-    elif avg_complexity > target_avg:
-        warnings.append(f"Average complexity {avg_complexity:.2f} exceeds target {target_avg:.2f}")
+    if avg_complexity > policy.hard_max_avg:
+        violations.append(f"Average complexity {avg_complexity:.2f} exceeds hard max {policy.hard_max_avg:.2f}")
+    elif avg_complexity > policy.target_avg:
+        warnings.append(f"Average complexity {avg_complexity:.2f} exceeds target {policy.target_avg:.2f}")
 
     return warnings, violations
 
@@ -177,13 +188,11 @@ def evaluate_complexity(
 def build_markdown(
     file_metrics: list[FileMetrics],
     overall: dict[str, float],
-    target_per_file: float,
-    hard_max_per_file: float,
-    target_avg: float,
-    hard_max_avg: float,
+    policy: ComplexityPolicy,
     warnings: list[str],
     violations: list[str],
 ) -> str:
+    """Render the summary, policy, findings and per-file table as Markdown."""
     lines: list[str] = []
     lines.append("## Coverage and Complexity Summary")
     lines.append("")
@@ -201,10 +210,10 @@ def build_markdown(
     lines.append("")
     lines.append("| Policy | Threshold |")
     lines.append("| --- | ---: |")
-    lines.append(f"| Target Complexity Per File | <= {target_per_file:.2f} |")
-    lines.append(f"| Hard Max Complexity Per File | <= {hard_max_per_file:.2f} |")
-    lines.append(f"| Target Avg Complexity | <= {target_avg:.2f} |")
-    lines.append(f"| Hard Max Avg Complexity | <= {hard_max_avg:.2f} |")
+    lines.append(f"| Target Complexity Per File | <= {policy.target_per_file:.2f} |")
+    lines.append(f"| Hard Max Complexity Per File | <= {policy.hard_max_per_file:.2f} |")
+    lines.append(f"| Target Avg Complexity | <= {policy.target_avg:.2f} |")
+    lines.append(f"| Hard Max Avg Complexity | <= {policy.hard_max_avg:.2f} |")
     lines.append("")
 
     if warnings:
@@ -233,6 +242,7 @@ def build_markdown(
 
 
 def build_text(file_metrics: list[FileMetrics], overall: dict[str, float]) -> str:
+    """Render a compact plain-text summary without the policy section."""
     lines: list[str] = []
     lines.append("Coverage and complexity summary")
     lines.append(
@@ -252,46 +262,39 @@ def build_text(file_metrics: list[FileMetrics], overall: dict[str, float]) -> st
     return "\n".join(lines) + "\n"
 
 
+def _column_width(label: str, values: list[str], overall_value: str) -> int:
+    """Width needed to fit the label, every value and the overall value."""
+    return max(len(label), len(overall_value), *(len(value) for value in values))
+
+
+def _append_bullets(lines: list[str], heading: str, items: list[str]) -> None:
+    """Append a heading and indented bullets to ``lines`` when ``items`` is non-empty."""
+    if not items:
+        return
+    lines.append(heading)
+    lines.extend(f"  - {item}" for item in items)
+
+
 def build_text_with_policy(
     file_metrics: list[FileMetrics],
     overall: dict[str, float],
-    target_per_file: float,
-    hard_max_per_file: float,
-    target_avg: float,
-    hard_max_avg: float,
+    policy: ComplexityPolicy,
     warnings: list[str],
     violations: list[str],
 ) -> str:
+    """Render the ASCII table summary followed by the complexity policy and findings."""
     file_label = "File"
     coverage_label = "Coverage"
     complexity_label = "Complexity"
 
-    file_width = len(file_label)
-    for item in file_metrics:
-        if len(item.filename) > file_width:
-            file_width = len(item.filename)
-    if len("OVERALL") > file_width:
-        file_width = len("OVERALL")
-
     coverage_values = [f"{item.coverage_rate * 100:.2f}% ({item.covered}/{item.valid})" for item in file_metrics]
     overall_coverage = f"{overall['overall_rate'] * 100:.2f}% ({int(overall['overall_covered'])}/{int(overall['overall_valid'])})"
-
-    coverage_width = len(coverage_label)
-    for value in coverage_values:
-        if len(value) > coverage_width:
-            coverage_width = len(value)
-    if len(overall_coverage) > coverage_width:
-        coverage_width = len(overall_coverage)
-
     complexity_values = [f"{item.complexity:.2f}" for item in file_metrics]
     overall_complexity = f"{overall['overall_complexity']:.2f}"
 
-    complexity_width = len(complexity_label)
-    for value in complexity_values:
-        if len(value) > complexity_width:
-            complexity_width = len(value)
-    if len(overall_complexity) > complexity_width:
-        complexity_width = len(overall_complexity)
+    file_width = _column_width(file_label, [item.filename for item in file_metrics], "OVERALL")
+    coverage_width = _column_width(coverage_label, coverage_values, overall_coverage)
+    complexity_width = _column_width(complexity_label, complexity_values, overall_complexity)
 
     separator = "+" + "-" * (file_width + 2) + "+" + "-" * (coverage_width + 2) + "+" + "-" * (complexity_width + 2) + "+"
 
@@ -316,25 +319,19 @@ def build_text_with_policy(
     lines.append(separator)
 
     lines.append("Complexity policy:")
-    lines.append(f"  Target per file: <= {target_per_file:.2f}")
-    lines.append(f"  Hard max per file: <= {hard_max_per_file:.2f}")
-    lines.append(f"  Target average: <= {target_avg:.2f}")
-    lines.append(f"  Hard max average: <= {hard_max_avg:.2f}")
+    lines.append(f"  Target per file: <= {policy.target_per_file:.2f}")
+    lines.append(f"  Hard max per file: <= {policy.hard_max_per_file:.2f}")
+    lines.append(f"  Target average: <= {policy.target_avg:.2f}")
+    lines.append(f"  Hard max average: <= {policy.hard_max_avg:.2f}")
 
-    if warnings:
-        lines.append("Complexity warnings:")
-        for warning in warnings:
-            lines.append(f"  - {warning}")
-
-    if violations:
-        lines.append("Complexity violations:")
-        for violation in violations:
-            lines.append(f"  - {violation}")
+    _append_bullets(lines, "Complexity warnings:", warnings)
+    _append_bullets(lines, "Complexity violations:", violations)
 
     return "\n".join(lines) + "\n"
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="Path to Cobertura XML file")
     parser.add_argument(
@@ -377,6 +374,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Run the report; return 2 when enforced complexity limits are exceeded."""
     args = parse_args()
     input_path = Path(args.input)
 
@@ -385,23 +383,23 @@ def main() -> int:
         return 1
 
     file_metrics, overall = parse_metrics(input_path)
+    policy = ComplexityPolicy(
+        target_per_file=args.target_per_file,
+        hard_max_per_file=args.hard_max_per_file,
+        target_avg=args.target_avg,
+        hard_max_avg=args.hard_max_avg,
+    )
     warnings, violations = evaluate_complexity(
         file_metrics,
         overall,
-        args.target_per_file,
-        args.hard_max_per_file,
-        args.target_avg,
-        args.hard_max_avg,
+        policy,
     )
 
     if args.format == "markdown":
         result = build_markdown(
             file_metrics,
             overall,
-            args.target_per_file,
-            args.hard_max_per_file,
-            args.target_avg,
-            args.hard_max_avg,
+            policy,
             warnings,
             violations,
         )
@@ -409,10 +407,7 @@ def main() -> int:
         result = build_text_with_policy(
             file_metrics,
             overall,
-            args.target_per_file,
-            args.hard_max_per_file,
-            args.target_avg,
-            args.hard_max_avg,
+            policy,
             warnings,
             violations,
         )

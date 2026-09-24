@@ -11,6 +11,7 @@ MAX_LENGTH = 140
 
 
 def tracked_files() -> list[Path]:
+    """List files tracked by git in the current repository."""
     result = subprocess.run(
         ["git", "ls-files"],
         check=True,
@@ -21,10 +22,12 @@ def tracked_files() -> list[Path]:
 
 
 def is_markdown(path: Path) -> bool:
+    """Return True for Markdown files, which are exempt from the limit."""
     return path.suffix.lower() in {".md", ".markdown"}
 
 
 def should_check(path: Path) -> bool:
+    """Return True when ``path`` is a text file subject to the line-length limit."""
     if path.is_dir() or is_markdown(path):
         return False
     if path.as_posix().startswith("node_modules/"):
@@ -35,6 +38,7 @@ def should_check(path: Path) -> bool:
 
 
 def scan_file(path: Path) -> list[tuple[int, int]]:
+    """Return (line number, length) for every line over the limit."""
     violations: list[tuple[int, int]] = []
     with path.open("r", encoding="utf-8", errors="strict") as handle:
         for lineno, raw_line in enumerate(handle, start=1):
@@ -45,6 +49,7 @@ def scan_file(path: Path) -> list[tuple[int, int]]:
 
 
 def main() -> int:
+    """Check all tracked files and return non-zero on any over-long line."""
     failures: list[tuple[Path, int, int]] = []
 
     for path in tracked_files():

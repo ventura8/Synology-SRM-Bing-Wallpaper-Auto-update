@@ -2,7 +2,7 @@
 
 Canonical agent rules and skill workflows: [`../AGENTS.md`](../AGENTS.md).
 
-**Current release:** [v1.0.3](releases/v1.0.3.md)
+**Current release:** [v1.0.4](releases/v1.0.4.md)
 
 ## Mandatory Quality Flow
 
@@ -66,3 +66,16 @@ CI must follow the same mandatory order and gates.
 - Pin GitHub Actions to immutable commit SHAs.
 - Pin external tools to explicit stable versions.
 - Prefer deterministic installs and reproducible builds.
+- Keep workflow `permissions` least-privilege (`contents: read` at workflow level,
+  write scopes only on the job that needs them).
+
+## Static Analysis (SonarQube Cloud)
+
+- CI runs a SonarQube Cloud scan (`sonarqube` job in `.github/workflows/ci.yml`)
+  configured by `sonar-project.properties` at the repository root.
+- One-time setup: import the repo in SonarQube Cloud (organization `ventura8`),
+  turn off Automatic Analysis, and add the `SONAR_TOKEN` repository secret.
+- Keep the Sonar quality gate clean: fix reported issues at the root cause; do not
+  mark them as won't-fix or add `NOSONAR` (same no-suppression policy as linters).
+- Coverage is enforced by the kcov ≥90% gate; Sonar coverage import is disabled
+  because kcov shell coverage is not a Sonar-supported report format.

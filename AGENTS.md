@@ -46,9 +46,10 @@ surface would otherwise drift (see **Always Update Relevant Markdown** below).
 
 - **Mandatory order**: format → lint/policy → tests → coverage (≥90%). Never skip a
   gate or reorder to hide failures.
-- **No suppressions**: never add `# shellcheck disable`, `# noqa`, `# type: ignore`,
+- **No suppressions**: never add `# shellcheck disable`, `# noqa`, `# type: ignore`, `NOSONAR`,
   `eslint-disable`, markdownlint disables, or equivalent. Fix the root cause.
-  `tools/check_forbidden_suppressions.py` enforces this.
+  `tools/check_forbidden_suppressions.py` enforces this (Markdown files are checked
+  for `<!-- markdownlint-disable/capture/configure-file -->` directives anywhere on a line).
 - **Line length**: non-Markdown files ≤ **140** characters
   (`tools/check_line_length.py`). Markdown MD013 is intentionally off in
   `.markdownlint.json`; prefer readable wraps anyway for shell/docs snippets.
@@ -252,6 +253,11 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
   - Docker `srm-mock` build/cache
   - parallel unit / component / e2e
   - merge coverage + ≥90% gate + complexity summary
+  - `sonarqube` job (after `quality`): SonarQube Cloud scan via
+    `SonarSource/sonarqube-scan-action`, configured by root `sonar-project.properties`
+    (org `ventura8`). Needs the `SONAR_TOKEN` repo secret; skips with a notice when
+    the secret is unavailable (fork PRs). Coverage stays gated by kcov, not Sonar.
+  - Workflow-level `permissions: contents: read`; grant write scopes per job only.
 - Workflow: `.github/workflows/release.yml` — triggers on `v*` tag push. Requires
   `VERSION` to already equal the tag and `docs/releases/<tag>.md` to already exist
   (both are `prepare-release` skill outputs); fails closed otherwise. Notes file must
@@ -267,6 +273,8 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
 - Keep CI steps aligned with `tools/runners/quality.sh` and `run_tests.sh`.
   A local-only check that CI does not run (or the reverse) is incomplete work.
 - Prefer deterministic installs (`apt-get` packages, pinned pip/npm versions).
+- `pip install` in CI and `tests/Dockerfile` uses `--only-binary :all:` (wheels only,
+  no `setup.py` execution; SonarQube rule `githubactions:S8541`).
 
 ## Specialist Modes (quick router)
 
