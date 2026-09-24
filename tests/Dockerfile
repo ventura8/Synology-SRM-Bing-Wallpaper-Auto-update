@@ -40,21 +40,21 @@ RUN printf 'Acquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99snaps
     && rm -rf /var/lib/apt/lists/*
 
 # Install bats-core (pinned)
-RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
+RUN curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     https://github.com/bats-core/bats-core/archive/refs/tags/v1.14.0.tar.gz \
     | tar -xz -C /tmp \
     && /tmp/bats-core-1.14.0/install.sh /usr/local \
     && rm -rf /tmp/bats-core-1.14.0
 
 # Install shellcheck (pinned)
-RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
+RUN curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz \
     | tar -xJ -C /tmp \
     && install /tmp/shellcheck-v0.11.0/shellcheck /usr/local/bin/shellcheck \
     && rm -rf /tmp/shellcheck-v0.11.0
 
 # Install shfmt (pinned)
-RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
+RUN curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_linux_amd64 \
       -o /usr/local/bin/shfmt \
     && chmod +x /usr/local/bin/shfmt
@@ -66,12 +66,12 @@ RUN python3 -m pip install --no-cache-dir --only-binary :all: --break-system-pac
 
 # Install Node.js 22 (pinned; markdownlint-cli@0.49.1 requires >=22)
 ARG NODE_VERSION=22.23.3
-RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
+RUN curl --proto "=https" --tlsv1.2 --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1
 
 # Install markdown lint tooling (pinned)
-RUN npm install --global markdownlint-cli@0.49.1
+RUN npm install --global --ignore-scripts markdownlint-cli@0.49.1
 
 # Build and Install kcov (pinned)
 RUN git clone --branch v43 --depth 1 https://github.com/SimonKagstrom/kcov.git /tmp/kcov \

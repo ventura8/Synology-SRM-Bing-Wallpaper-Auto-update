@@ -5,7 +5,7 @@
 main() {
     USER_ID=$(id -u)
     if [ "$USER_ID" -ne 0 ]; then
-        echo "Error: This script must be run as root. Try 'sudo -i' first."
+        echo "Error: This script must be run as root. Try 'sudo -i' first." >&2
         exit 1
     fi
 
@@ -25,6 +25,7 @@ main() {
                 read -r "$@"
             fi
         fi
+        return $?
     }
 
     can_prompt() {
@@ -39,17 +40,17 @@ main() {
         cp "$LOCAL_INSTALL_PATH" "$STAGE_FILE"
     else
         echo "Downloading SRM Wallpaper Script..."
-        if ! wget -t 5 --no-cache "$REPO_URL/$SCRIPT_NAME" -qO "$STAGE_FILE"; then
+        if ! wget -t 5 --max-redirect=0 --no-cache "$REPO_URL/$SCRIPT_NAME" -qO "$STAGE_FILE"; then
             rm -f "$STAGE_FILE"
-            echo "Error: Download failed. If this is a certificate error, update the router CA store"
-            echo "or install offline with LOCAL_INSTALL_PATH=/path/to/bing_wallpaper_auto_update.sh"
+            echo "Error: Download failed. If this is a certificate error, update the router CA store" >&2
+            echo "or install offline with LOCAL_INSTALL_PATH=/path/to/bing_wallpaper_auto_update.sh" >&2
             exit 1
         fi
     fi
 
     if [ ! -s "$STAGE_FILE" ]; then
         rm -f "$STAGE_FILE"
-        echo "Error: Download failed, file missing, or empty."
+        echo "Error: Download failed, file missing, or empty." >&2
         exit 1
     fi
 

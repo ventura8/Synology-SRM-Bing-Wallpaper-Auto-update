@@ -55,6 +55,8 @@ CI must follow the same mandatory order and gates.
 - **Paths**: Use dynamic path discovery for SRM resource locations as they may vary between minor versions.
 - **Cleanup**: Temp downloads must use a private `mktemp -d` workdir with trap cleanup (never predictable world-writable `/tmp` paths).
 - **Downloads**: Keep TLS certificate verification enabled on all `wget` calls; never use `--no-check-certificate`.
+  Pass `--max-redirect=0` so an unexpected redirect fails instead of being followed.
+- **Errors**: Write `Error:` messages to stderr (`>&2`) and exit nonzero.
 - **Content validation**: Reject non-JPEG payloads (SOI magic) before ImageMagick or system wallpaper writes.
 - **Archive safety**: Sanitize archive dates to exactly eight digits (`YYYYMMDD`) before building archive paths.
 - **Documentation**: On every change, update all relevant markdown in the same change
