@@ -29,7 +29,8 @@ description: >-
 
 ## Workflow
 
-1. Inventory pins in `.github/workflows/ci.yml`, runners, and docs.
+1. Inventory pins in `.github/workflows/ci.yml` (incl. `SonarSource/sonarqube-scan-action`),
+   `release.yml` (`gh`), `tests/Dockerfile`, `.pre-commit-config.yaml`, runners, and docs.
 2. Resolve current stable upstream versions/tags/SHAs.
 3. Update workflow and any mirrored local install instructions together.
 4. Run `./tools/runners/quality.sh`.

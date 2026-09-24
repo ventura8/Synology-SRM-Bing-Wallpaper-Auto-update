@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 PATTERN = re.compile(
-    r"shellcheck\s+disable|noqa|pylint:\s*disable|eslint-disable|pragma:\s*no\s*cover|fmt:\s*off",
+    r"shellcheck\s+disable|noqa|pylint:\s*disable|eslint-disable|pragma:\s*no\s*cover|fmt:\s*off|NOSONAR",
     re.IGNORECASE,
 )
 
