@@ -60,7 +60,7 @@ RUN curl --retry 5 --retry-delay 2 --retry-connrefused -fsSL \
     && chmod +x /usr/local/bin/shfmt
 
 # Install python lint tooling (pinned)
-RUN python3 -m pip install --no-cache-dir --break-system-packages \
+RUN python3 -m pip install --no-cache-dir --only-binary :all: --break-system-packages \
     ruff==0.16.8 \
     yamllint==1.38.0
 

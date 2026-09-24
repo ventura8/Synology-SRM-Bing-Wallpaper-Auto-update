@@ -273,6 +273,8 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
 - Keep CI steps aligned with `tools/runners/quality.sh` and `run_tests.sh`.
   A local-only check that CI does not run (or the reverse) is incomplete work.
 - Prefer deterministic installs (`apt-get` packages, pinned pip/npm versions).
+- `pip install` in CI and `tests/Dockerfile` uses `--only-binary :all:` (wheels only,
+  no `setup.py` execution; SonarQube rule `githubactions:S8541`).
 
 ## Specialist Modes (quick router)
 
