@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -87,6 +88,33 @@ def _estimated_shell_complexity(file_path: Path) -> float:
     return float(complexity)
 
 
+def _file_metrics_from_class(class_el: ET.Element) -> tuple[FileMetrics, float]:
+    """Build one file's metrics from a Cobertura <class>; also return its raw reported complexity."""
+    filename = class_el.get("filename", "unknown")
+    raw_complexity = _to_float(class_el.get("complexity"), 0.0)
+    complexity = raw_complexity
+
+    source_path = Path(filename)
+    if source_path.suffix == ".sh" and source_path.exists():
+        complexity = _estimated_shell_complexity(source_path)
+
+    covered, valid = _line_counts_from_class(class_el)
+    if valid == 0:
+        covered = _to_int(class_el.get("lines-covered"), 0)
+        valid = _to_int(class_el.get("lines-valid"), 0)
+
+    coverage_rate = covered / valid if valid > 0 else _to_float(class_el.get("line-rate"), 0.0)
+
+    metrics = FileMetrics(
+        filename=filename,
+        covered=covered,
+        valid=valid,
+        coverage_rate=coverage_rate,
+        complexity=complexity,
+    )
+    return metrics, raw_complexity
+
+
 def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, float]]:
     """Read per-file and overall metrics from a Cobertura XML file."""
     tree = ET.parse(cobertura_path)
@@ -95,35 +123,9 @@ def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, fl
     file_metrics: list[FileMetrics] = []
     raw_complexities: list[float] = []
     for class_el in root.findall(".//class"):
-        filename = class_el.get("filename", "unknown")
-        raw_complexity = _to_float(class_el.get("complexity"), 0.0)
+        metrics, raw_complexity = _file_metrics_from_class(class_el)
+        file_metrics.append(metrics)
         raw_complexities.append(raw_complexity)
-        complexity = raw_complexity
-
-        source_path = Path(filename)
-        if source_path.suffix == ".sh" and source_path.exists():
-            complexity = _estimated_shell_complexity(source_path)
-
-        covered, valid = _line_counts_from_class(class_el)
-
-        if valid == 0:
-            covered = _to_int(class_el.get("lines-covered"), 0)
-            valid = _to_int(class_el.get("lines-valid"), 0)
-
-        if valid > 0:
-            coverage_rate = covered / valid
-        else:
-            coverage_rate = _to_float(class_el.get("line-rate"), 0.0)
-
-        file_metrics.append(
-            FileMetrics(
-                filename=filename,
-                covered=covered,
-                valid=valid,
-                coverage_rate=coverage_rate,
-                complexity=complexity,
-            )
-        )
 
     file_metrics.sort(key=lambda item: item.filename)
 
@@ -140,7 +142,7 @@ def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, fl
     overall_valid = _to_int(root.get("lines-valid"), total_valid)
 
     root_complexity = _to_float(root.get("complexity"), -1.0)
-    all_placeholder_complexity = bool(raw_complexities) and all(value == 1.0 for value in raw_complexities)
+    all_placeholder_complexity = bool(raw_complexities) and all(math.isclose(value, 1.0) for value in raw_complexities)
     if all_placeholder_complexity:
         root_complexity = total_complexity
     if root_complexity < 0.0:
@@ -330,6 +332,15 @@ def build_text_with_policy(
     return "\n".join(lines) + "\n"
 
 
+def _safe_output_path(raw_path: str) -> Path | None:
+    """Resolve ``raw_path`` and return it only if it stays inside the working directory."""
+    base = Path.cwd().resolve()
+    candidate = (base / raw_path).resolve()
+    if not candidate.is_relative_to(base):
+        return None
+    return candidate
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -415,7 +426,11 @@ def main() -> int:
     print(result, end="")
 
     if args.output:
-        Path(args.output).write_text(result, encoding="utf-8")
+        output_path = _safe_output_path(args.output)
+        if output_path is None:
+            print(f"Coverage metrics error: output path must stay inside {Path.cwd()}: {args.output}", file=sys.stderr)
+            return 1
+        output_path.write_text(result, encoding="utf-8")
 
     if args.enforce_complexity and violations:
         return 2

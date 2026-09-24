@@ -73,14 +73,14 @@ SRM_ROUTER_THEME_DIR="/usr/syno/synoman/webman/resources/images/theme/router/def
 main() {
     # Check for root
     if [ "$(id -u)" -ne 0 ]; then
-        echo "Error: This script must be run as root."
+        echo "Error: This script must be run as root." >&2
         echo "Try: sudo $0"
         exit 1
     fi
 
     # Private temp directory (avoids /tmp symlink races)
     WORKDIR=$(mktemp -d /tmp/bing_srm.XXXXXX) || {
-        echo "Error: Could not create temporary directory."
+        echo "Error: Could not create temporary directory." >&2
         exit 1
     }
     chmod 700 "$WORKDIR"
@@ -99,8 +99,8 @@ main() {
     # --- Step 1: Fetch Image Info ---
     echo "Fetching Bing Wallpaper info ($BING_RESOLUTION - $BING_MARKET)..."
     API_URL="https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=$BING_MARKET"
-    JSON=$(wget -qO- "$API_URL") || {
-        echo "Error: Failed to fetch Bing API (check network/TLS certificates)."
+    JSON=$(wget --max-redirect=0 -qO- "$API_URL") || {
+        echo "Error: Failed to fetch Bing API (check network/TLS certificates)." >&2
         exit 1
     }
 
@@ -129,13 +129,14 @@ main() {
         /*)
             case "$URL_PART" in
                 *://* | *@* | *..*)
-                    echo "Error: Wallpaper URL path contains unexpected characters."
+                    echo "Error: Wallpaper URL path contains unexpected characters." >&2
                     exit 1
                     ;;
+                *) ;;
             esac
             ;;
         *)
-            echo "Error: Could not extract wallpaper URL."
+            echo "Error: Could not extract wallpaper URL." >&2
             exit 1
             ;;
     esac
@@ -145,12 +146,12 @@ main() {
     echo "Copyright: $COPYRIGHT"
 
     # --- Step 2: Download Image ---
-    wget -t 5 --user-agent="Mozilla/5.0" "$PIC_URL" -qO "$TMP_FILE" || {
-        echo "Error: Download failed (check network/TLS certificates)."
+    wget -t 5 --max-redirect=0 --user-agent="Mozilla/5.0" "$PIC_URL" -qO "$TMP_FILE" || {
+        echo "Error: Download failed (check network/TLS certificates)." >&2
         exit 1
     }
     [ -s "$TMP_FILE" ] || {
-        echo "Error: Download failed."
+        echo "Error: Download failed." >&2
         exit 1
     }
 
@@ -159,7 +160,7 @@ main() {
     case "$MAGIC" in
         ffd8ff) ;;
         *)
-            echo "Error: Downloaded file does not start with a JPEG SOI marker."
+            echo "Error: Downloaded file does not start with a JPEG SOI marker." >&2
             exit 1
             ;;
     esac
@@ -183,7 +184,7 @@ main() {
         if [ "$FONT_KB" -lt 10 ]; then
             echo "Downloading overlay font..."
             FONT_STAGED="$WORKDIR/Lato-Bold.ttf"
-            wget --user-agent="Mozilla/5.0" -qO "$FONT_STAGED" "$FONT_URL" || rm -f "$FONT_STAGED"
+            wget --max-redirect=0 --user-agent="Mozilla/5.0" -qO "$FONT_STAGED" "$FONT_URL" || rm -f "$FONT_STAGED"
             if [ -s "$FONT_STAGED" ]; then
                 mv -f "$FONT_STAGED" "$FONT_FILE"
                 chmod 644 "$FONT_FILE"
@@ -192,7 +193,7 @@ main() {
 
         if [ -s "$FONT_FILE" ]; then
             if head -c 5 "$FONT_FILE" | grep -q "<"; then
-                echo "Error: Downloaded font appears to be HTML. Removing..."
+                echo "Warning: Downloaded font appears to be HTML. Removing..." >&2
                 rm -f "$FONT_FILE"
                 echo "Warning: Font missing or zero size. Skipping text overlay."
             else
@@ -212,6 +213,7 @@ main() {
                 BOX_WIDTH=$((WIDTH * 40 / 100))
                 # Padding inside box: Fixed 25px
                 PADDING=25
+                TRANSPARENT="rgba(0,0,0,0)"
 
                 echo "Calculated Margin: $MARGIN_X, Max Box Width: $BOX_WIDTH"
 
@@ -222,23 +224,23 @@ main() {
                 # 1. Caption at Max width (wraps if long)
                 # 2. Add Border (Protection for anti-aliasing pixels)
                 # 3. Trim (Removes empty space + border)
-                convert -background "rgba(0,0,0,0)" -fill white -font "$FONT_FILE" -pointsize 24 \
+                convert -background "$TRANSPARENT" -fill white -font "$FONT_FILE" -pointsize 24 \
                     -size ${BOX_WIDTH}x -gravity NorthWest caption:"$TITLE" \
-                    -bordercolor "rgba(0,0,0,0)" -border 20 \
+                    -bordercolor "$TRANSPARENT" -border 20 \
                     -trim +repage \
                     "$TMP_TITLE"
 
                 # --- Generate COPYRIGHT ---
-                convert -background "rgba(0,0,0,0)" -fill white -font "$FONT_FILE" -pointsize 16 \
+                convert -background "$TRANSPARENT" -fill white -font "$FONT_FILE" -pointsize 16 \
                     -size ${BOX_WIDTH}x -gravity NorthWest caption:"$COPYRIGHT" \
-                    -bordercolor "rgba(0,0,0,0)" -border 20 \
+                    -bordercolor "$TRANSPARENT" -border 20 \
                     -trim +repage \
                     "$TMP_COPY"
 
                 # Combine them vertically
                 # Align Left (West)
-                convert "$TMP_TITLE" "$TMP_COPY" -background "rgba(0,0,0,0)" -gravity West -append \
-                    -bordercolor "rgba(0,0,0,0)" -border $PADDING \
+                convert "$TMP_TITLE" "$TMP_COPY" -background "$TRANSPARENT" -gravity West -append \
+                    -bordercolor "$TRANSPARENT" -border $PADDING \
                     -background "rgba(0,0,0,0.5)" -flatten \
                     +repage \
                     "$TMP_BOX"
@@ -264,7 +266,7 @@ main() {
                     mv -f "$TMP_OVERLAY" "$TMP_LOGIN_FILE"
                     echo "Text overlay added (Login Screen Only): $TITLE | $COPYRIGHT"
                 else
-                    echo "Error: ImageMagick failed to create overlay."
+                    echo "Warning: ImageMagick failed to create overlay. Deploying without text overlay." >&2
                 fi
             fi
         else
@@ -343,7 +345,7 @@ main() {
                 SAFE_DATE=$DATE
                 ARCHIVE_FILE="$SAVE_PATH/${SAFE_DATE} - ${SAFE_TITLE} - ${SAFE_COPYRIGHT}.jpg"
                 cp -f "$TMP_FILE" "$ARCHIVE_FILE" || {
-                    echo "Error: Failed to archive wallpaper to $ARCHIVE_FILE"
+                    echo "Error: Failed to archive wallpaper to $ARCHIVE_FILE" >&2
                     exit 1
                 }
                 chmod 644 "$ARCHIVE_FILE"

@@ -204,9 +204,18 @@ and workflows you touched. Stale docs are incomplete work (same as missing tests
 - ImageMagick `convert` is optional for overlay; when missing, skip overlay safely
   rather than crashing if the product path already guards with `which convert`.
 - Bing/GitHub fetches use `wget` **with TLS verification** (never
-  `--no-check-certificate`). Keep retries intentional and cover downloads with mocks
+  `--no-check-certificate`) and `--max-redirect=0`, so a redirect (possibly to plain
+  HTTP) fails closed instead of being followed. Every endpoint used (Bing API/images,
+  jsDelivr font, GitHub raw) answers directly with 200. Keep retries intentional and cover downloads with mocks
   in tests (do not call the live Bing API from CI tests). Cache overlay fonts under
   root-owned `/usr/local/share/bing-wallpaper/`, not `/tmp`.
+- `Error:` messages in product scripts go to stderr (`>&2`) and are followed by a
+  nonzero exit. Recoverable problems that let the run continue (bad font download,
+  overlay failure) use `Warning:` instead. BATS `run` captures stderr too, so tests
+  keep matching them.
+- Bash-only tooling (`tools/runners/*.sh`) uses `[[ … ]]`, gives every `case` a
+  `*)` branch (unknown runner flags exit 2), and ends functions with an explicit
+  `return`. POSIX product scripts keep `[ … ]` (no bashisms on SRM).
 
 ## Install / Uninstall Invariants
 
@@ -275,6 +284,10 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
 - Prefer deterministic installs (`apt-get` packages, pinned pip/npm versions).
 - `pip install` in CI and `tests/Dockerfile` uses `--only-binary :all:` (wheels only,
   no `setup.py` execution; SonarQube rule `githubactions:S8541`).
+- `npm install` uses `--ignore-scripts`; `curl` downloads use `--proto "=https" --tlsv1.2`
+  so redirects cannot downgrade to HTTP.
+- Workflows never `chmod 777` workspace paths; the kcov merge container runs as root
+  and needs no world-writable directory.
 
 ## Specialist Modes (quick router)
 

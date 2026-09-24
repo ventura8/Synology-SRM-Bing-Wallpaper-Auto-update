@@ -5,7 +5,7 @@
 main() {
     USER_ID=$(id -u)
     if [ "$USER_ID" -ne 0 ]; then
-        echo "Error: This script must be run as root. Try 'sudo -i' first."
+        echo "Error: This script must be run as root. Try 'sudo -i' first." >&2
         exit 1
     fi
 

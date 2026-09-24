@@ -42,10 +42,16 @@ for arg in "$@"; do
             UNIT=true
             HAS_FLAG=true
             ;;
+        *)
+            echo "Error: unknown option: $arg" >&2
+            echo "Valid options: --unit-only --component-only --e2e-only --unit-install" \
+                "--unit-uninstall --unit-wallpaper --installer-only" >&2
+            exit 2
+            ;;
     esac
 done
 
-if [ "$HAS_FLAG" = "false" ]; then
+if [[ "$HAS_FLAG" = "false" ]]; then
     UNIT=true
     COMPONENT=true
     E2E=true
@@ -62,7 +68,7 @@ run_bats_suite() {
 
     echo "Running $TYPE Tests..."
 
-    if [ "$COVERAGE" = "1" ]; then
+    if [[ "$COVERAGE" = "1" ]]; then
         # Ensure kcov output dir exists
         mkdir -p "$COVERAGE_OUTPUT/$TYPE"
 
@@ -74,29 +80,29 @@ run_bats_suite() {
     fi
 }
 
-if [ "$UNIT" = "true" ] || [ "$UNIT_INSTALL" = "true" ]; then
+if [[ "$UNIT" = "true" ]] || [[ "$UNIT_INSTALL" = "true" ]]; then
     run_bats_suite "unit/install" "/app" tests/install.bats
 fi
 
-if [ "$UNIT" = "true" ] || [ "$UNIT_UNINSTALL" = "true" ]; then
+if [[ "$UNIT" = "true" ]] || [[ "$UNIT_UNINSTALL" = "true" ]]; then
     run_bats_suite "unit/uninstall" "/app" tests/uninstall.bats
 fi
 
-if [ "$UNIT" = "true" ] || [ "$UNIT_WALLPAPER" = "true" ]; then
+if [[ "$UNIT" = "true" ]] || [[ "$UNIT_WALLPAPER" = "true" ]]; then
     run_bats_suite "unit/wallpaper" "/app" tests/wallpaper.bats
 fi
 
-if [ "$COMPONENT" = "true" ]; then
+if [[ "$COMPONENT" = "true" ]]; then
     run_bats_suite "component" "/app" tests/component.bats
 fi
 
-if [ "$E2E" = "true" ]; then
+if [[ "$E2E" = "true" ]]; then
     # E2E tests
     run_bats_suite "e2e" "bing_wallpaper_auto_update.sh,install.sh,uninstall.sh" \
         tests/e2e_tests.bats
 fi
 
-if [ "$COVERAGE" = "1" ] && [ "$UNIT" = "true" ] && [ "$E2E" = "true" ]; then
+if [[ "$COVERAGE" = "1" ]] && [[ "$UNIT" = "true" ]] && [[ "$E2E" = "true" ]]; then
     echo "Merging Coverage Reports..."
     mkdir -p "$COVERAGE_OUTPUT/final"
     kcov --merge "$COVERAGE_OUTPUT/final" \
@@ -106,7 +112,7 @@ if [ "$COVERAGE" = "1" ] && [ "$UNIT" = "true" ] && [ "$E2E" = "true" ]; then
         "$COVERAGE_OUTPUT/component" \
         "$COVERAGE_OUTPUT/e2e"
 
-    if [ -f "$COVERAGE_OUTPUT/final/cobertura.xml" ]; then
+    if [[ -f "$COVERAGE_OUTPUT/final/cobertura.xml" ]]; then
         echo "Updating coverage badge..."
         python3 tests/transform_coverage.py "$COVERAGE_OUTPUT/final/cobertura.xml"
     fi
