@@ -2,7 +2,7 @@
 
 # ==============================================================================
 # Synology SRM 1.3 Bing Daily Wallpaper Script
-# Version: 1.0.3
+# Version: 1.0.4
 #
 # Description:
 # This script downloads the daily Bing wallpaper and updates the SRM login screen.

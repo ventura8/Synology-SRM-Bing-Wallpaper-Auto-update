@@ -2,7 +2,7 @@
 
 Canonical agent rules and skill workflows: [`../AGENTS.md`](../AGENTS.md).
 
-**Current release:** [v1.0.3](releases/v1.0.3.md)
+**Current release:** [v1.0.4](releases/v1.0.4.md)
 
 ## Mandatory Quality Flow
 

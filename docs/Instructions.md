@@ -18,4 +18,4 @@ Project skills: [`../.agents/skills/`](../.agents/skills/)
   - Environment setup, testing, and coding standards (including mandatory 90% coverage).
 - [Configuration](configuration.md)
   - `bing_wallpaper_auto_update.sh` configuration options.
-- [Release notes](releases/v1.0.3.md) (prior: [v1.0.2](releases/v1.0.2.md))
+- [Release notes](releases/v1.0.4.md) (prior: [v1.0.3](releases/v1.0.3.md))
