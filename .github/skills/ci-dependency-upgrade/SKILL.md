@@ -24,3 +24,6 @@ Canonical skill text:
 5. Run Dockerized `bash ./tools/runners/run_tests.sh` with coverage enabled.
    Representative/partial suites are smoke checks only; require the full unit +
    e2e pipeline to verify total repository coverage ≥90%.
+6. Never silence upstream drift with suppressions (`# shellcheck disable`, `# noqa`,
+   `NOSONAR`, `<!-- markdownlint-disable -->`, …); fix the root cause.
+   `tools/check_forbidden_suppressions.py` enforces this, Markdown included.

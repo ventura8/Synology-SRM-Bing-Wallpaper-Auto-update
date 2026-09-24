@@ -26,6 +26,9 @@ description: >-
 3. Prefer deterministic apt/pip/npm installs; avoid floating `@latest` in CI.
 4. After bumps, run quality **and** the Dockerized test suite with coverage
    (see Workflow). `quality.sh` does **not** run tests or the ≥90% coverage gate.
+5. Never silence upstream drift with suppressions (`# shellcheck disable`, `# noqa`,
+   `NOSONAR`, `<!-- markdownlint-disable -->`, …); fix the root cause.
+   `tools/check_forbidden_suppressions.py` enforces this, Markdown included.
 
 ## Workflow
 

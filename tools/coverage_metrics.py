@@ -13,6 +13,8 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class FileMetrics:
+    """Coverage and complexity figures for one file in the Cobertura report."""
+
     filename: str
     covered: int
     valid: int
@@ -22,6 +24,8 @@ class FileMetrics:
 
 @dataclass(slots=True, frozen=True)
 class ComplexityPolicy:
+    """Target and hard-max complexity thresholds, per file and averaged across files."""
+
     target_per_file: float
     hard_max_per_file: float
     target_avg: float
@@ -84,6 +88,7 @@ def _estimated_shell_complexity(file_path: Path) -> float:
 
 
 def parse_metrics(cobertura_path: Path) -> tuple[list[FileMetrics], dict[str, float]]:
+    """Read per-file and overall metrics from a Cobertura XML file."""
     tree = ET.parse(cobertura_path)
     root = tree.getroot()
 
@@ -161,6 +166,7 @@ def evaluate_complexity(
     overall: dict[str, float],
     policy: ComplexityPolicy,
 ) -> tuple[list[str], list[str]]:
+    """Split threshold breaches into warnings (over target) and violations (over hard max)."""
     warnings: list[str] = []
     violations: list[str] = []
 
@@ -186,6 +192,7 @@ def build_markdown(
     warnings: list[str],
     violations: list[str],
 ) -> str:
+    """Render the summary, policy, findings and per-file table as Markdown."""
     lines: list[str] = []
     lines.append("## Coverage and Complexity Summary")
     lines.append("")
@@ -235,6 +242,7 @@ def build_markdown(
 
 
 def build_text(file_metrics: list[FileMetrics], overall: dict[str, float]) -> str:
+    """Render a compact plain-text summary without the policy section."""
     lines: list[str] = []
     lines.append("Coverage and complexity summary")
     lines.append(
@@ -255,10 +263,12 @@ def build_text(file_metrics: list[FileMetrics], overall: dict[str, float]) -> st
 
 
 def _column_width(label: str, values: list[str], overall_value: str) -> int:
+    """Width needed to fit the label, every value and the overall value."""
     return max(len(label), len(overall_value), *(len(value) for value in values))
 
 
 def _append_bullets(lines: list[str], heading: str, items: list[str]) -> None:
+    """Append a heading and indented bullets to ``lines`` when ``items`` is non-empty."""
     if not items:
         return
     lines.append(heading)
@@ -272,6 +282,7 @@ def build_text_with_policy(
     warnings: list[str],
     violations: list[str],
 ) -> str:
+    """Render the ASCII table summary followed by the complexity policy and findings."""
     file_label = "File"
     coverage_label = "Coverage"
     complexity_label = "Complexity"
@@ -320,6 +331,7 @@ def build_text_with_policy(
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="Path to Cobertura XML file")
     parser.add_argument(
@@ -362,6 +374,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """Run the report; return 2 when enforced complexity limits are exceeded."""
     args = parse_args()
     input_path = Path(args.input)
 

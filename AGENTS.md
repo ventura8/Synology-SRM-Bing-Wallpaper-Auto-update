@@ -48,7 +48,8 @@ surface would otherwise drift (see **Always Update Relevant Markdown** below).
   gate or reorder to hide failures.
 - **No suppressions**: never add `# shellcheck disable`, `# noqa`, `# type: ignore`, `NOSONAR`,
   `eslint-disable`, markdownlint disables, or equivalent. Fix the root cause.
-  `tools/check_forbidden_suppressions.py` enforces this.
+  `tools/check_forbidden_suppressions.py` enforces this (Markdown files are checked
+  for `<!-- markdownlint-disable/capture/configure-file -->` directives).
 - **Line length**: non-Markdown files ≤ **140** characters
   (`tools/check_line_length.py`). Markdown MD013 is intentionally off in
   `.markdownlint.json`; prefer readable wraps anyway for shell/docs snippets.
