@@ -375,7 +375,7 @@ EOT
     rm -rf /tmp/bin_comp_fail
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Error: ImageMagick failed to create overlay"* ]]
+    [[ "$output" == *"Warning: ImageMagick failed to create overlay"* ]]
 }
 
 @test "Script should fail if not root (Top-level)" {

@@ -193,7 +193,7 @@ main() {
 
         if [ -s "$FONT_FILE" ]; then
             if head -c 5 "$FONT_FILE" | grep -q "<"; then
-                echo "Error: Downloaded font appears to be HTML. Removing..." >&2
+                echo "Warning: Downloaded font appears to be HTML. Removing..." >&2
                 rm -f "$FONT_FILE"
                 echo "Warning: Font missing or zero size. Skipping text overlay."
             else
@@ -266,7 +266,7 @@ main() {
                     mv -f "$TMP_OVERLAY" "$TMP_LOGIN_FILE"
                     echo "Text overlay added (Login Screen Only): $TITLE | $COPYRIGHT"
                 else
-                    echo "Error: ImageMagick failed to create overlay." >&2
+                    echo "Warning: ImageMagick failed to create overlay. Deploying without text overlay." >&2
                 fi
             fi
         else
