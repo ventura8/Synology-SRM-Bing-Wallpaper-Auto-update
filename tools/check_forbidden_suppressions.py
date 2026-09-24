@@ -12,10 +12,11 @@ PATTERN = re.compile(
     r"shellcheck\s+disable|noqa|pylint:\s*disable|eslint-disable|pragma:\s*no\s*cover|fmt:\s*off|NOSONAR",
     re.IGNORECASE,
 )
-# Markdown prose may name forbidden directives, so only match real HTML-comment directives there.
-MARKDOWN_PATTERN = re.compile(r"^\s*<!--\s*markdownlint-(disable|capture|configure-file)", re.IGNORECASE)
+# Markdown prose may name directives inside backtick code spans, so match only real HTML-comment
+# directives (anywhere on the line, including trailing `disable-line` ones) not opened by a backtick.
+MARKDOWN_PATTERN = re.compile(r"(?<!`)<!--\s*markdownlint-(disable|capture|configure-file)", re.IGNORECASE)
 
-CODE_SUFFIXES = {".sh", ".bats", ".ps1", ".py", ".yml", ".yaml", ".json", ".toml"}
+CODE_SUFFIXES = {".sh", ".bats", ".ps1", ".py", ".yml", ".yaml", ".json", ".toml", ".js", ".mjs", ".cjs", ".ts"}
 
 
 def tracked_files() -> list[Path]:
