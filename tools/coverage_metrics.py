@@ -196,46 +196,62 @@ def build_markdown(
 ) -> str:
     """Render the summary, policy, findings and per-file table as Markdown."""
     lines: list[str] = []
-    lines.append("## Coverage and Complexity Summary")
-    lines.append("")
-    lines.append("### Overall")
-    lines.append("")
-    lines.append("| Metric | Value |")
-    lines.append("| --- | ---: |")
-    lines.append(f"| Coverage | {overall['overall_rate'] * 100:.2f}% ({int(overall['overall_covered'])}/{int(overall['overall_valid'])}) |")
-    lines.append(f"| Complexity (Overall) | {overall['overall_complexity']:.2f} |")
-    lines.append(f"| Complexity (Total Files) | {overall['total_complexity']:.2f} |")
-    lines.append(f"| Complexity (Avg/File) | {overall['average_complexity']:.2f} |")
-    lines.append(f"| Files | {int(overall['file_count'])} |")
-    lines.append("")
-    lines.append("### Complexity Policy")
-    lines.append("")
-    lines.append("| Policy | Threshold |")
-    lines.append("| --- | ---: |")
-    lines.append(f"| Target Complexity Per File | <= {policy.target_per_file:.2f} |")
-    lines.append(f"| Hard Max Complexity Per File | <= {policy.hard_max_per_file:.2f} |")
-    lines.append(f"| Target Avg Complexity | <= {policy.target_avg:.2f} |")
-    lines.append(f"| Hard Max Avg Complexity | <= {policy.hard_max_avg:.2f} |")
-    lines.append("")
+    lines.extend(
+        [
+            "## Coverage and Complexity Summary",
+            "",
+            "### Overall",
+            "",
+            "| Metric | Value |",
+            "| --- | ---: |",
+            f"| Coverage | {overall['overall_rate'] * 100:.2f}% ({int(overall['overall_covered'])}/{int(overall['overall_valid'])}) |",
+            f"| Complexity (Overall) | {overall['overall_complexity']:.2f} |",
+            f"| Complexity (Total Files) | {overall['total_complexity']:.2f} |",
+            f"| Complexity (Avg/File) | {overall['average_complexity']:.2f} |",
+            f"| Files | {int(overall['file_count'])} |",
+            "",
+            "### Complexity Policy",
+            "",
+            "| Policy | Threshold |",
+            "| --- | ---: |",
+            f"| Target Complexity Per File | <= {policy.target_per_file:.2f} |",
+            f"| Hard Max Complexity Per File | <= {policy.hard_max_per_file:.2f} |",
+            f"| Target Avg Complexity | <= {policy.target_avg:.2f} |",
+            f"| Hard Max Avg Complexity | <= {policy.hard_max_avg:.2f} |",
+            "",
+        ]
+    )
 
     if warnings:
-        lines.append("### Complexity Warnings")
-        lines.append("")
+        lines.extend(
+            [
+                "### Complexity Warnings",
+                "",
+            ]
+        )
         for warning in warnings:
             lines.append(f"- {warning}")
         lines.append("")
 
     if violations:
-        lines.append("### Complexity Violations")
-        lines.append("")
+        lines.extend(
+            [
+                "### Complexity Violations",
+                "",
+            ]
+        )
         for violation in violations:
             lines.append(f"- {violation}")
         lines.append("")
 
-    lines.append("### Per-file")
-    lines.append("")
-    lines.append("| File | Coverage | Complexity |")
-    lines.append("| --- | ---: | ---: |")
+    lines.extend(
+        [
+            "### Per-file",
+            "",
+            "| File | Coverage | Complexity |",
+            "| --- | ---: | ---: |",
+        ]
+    )
 
     for item in file_metrics:
         lines.append(f"| {item.filename} | {item.coverage_rate * 100:.2f}% ({item.covered}/{item.valid}) | {item.complexity:.2f} |")
@@ -246,15 +262,17 @@ def build_markdown(
 def build_text(file_metrics: list[FileMetrics], overall: dict[str, float]) -> str:
     """Render a compact plain-text summary without the policy section."""
     lines: list[str] = []
-    lines.append("Coverage and complexity summary")
-    lines.append(
-        "Overall: "
-        f"coverage {overall['overall_rate'] * 100:.2f}% "
-        f"({int(overall['overall_covered'])}/{int(overall['overall_valid'])}), "
-        f"complexity {overall['overall_complexity']:.2f}, "
-        f"avg/file {overall['average_complexity']:.2f}, files {int(overall['file_count'])}"
+    lines.extend(
+        [
+            "Coverage and complexity summary",
+            "Overall: "
+            f"coverage {overall['overall_rate'] * 100:.2f}% "
+            f"({int(overall['overall_covered'])}/{int(overall['overall_valid'])}), "
+            f"complexity {overall['overall_complexity']:.2f}, "
+            f"avg/file {overall['average_complexity']:.2f}, files {int(overall['file_count'])}",
+            "Per-file:",
+        ]
     )
-    lines.append("Per-file:")
 
     for item in file_metrics:
         lines.append(
@@ -301,12 +319,14 @@ def build_text_with_policy(
     separator = "+" + "-" * (file_width + 2) + "+" + "-" * (coverage_width + 2) + "+" + "-" * (complexity_width + 2) + "+"
 
     lines: list[str] = []
-    lines.append("Coverage and complexity summary")
-    lines.append(separator)
-    lines.append(
-        f"| {file_label.ljust(file_width)} | {coverage_label.ljust(coverage_width)} | {complexity_label.ljust(complexity_width)} |"
+    lines.extend(
+        [
+            "Coverage and complexity summary",
+            separator,
+            f"| {file_label.ljust(file_width)} | {coverage_label.ljust(coverage_width)} | {complexity_label.ljust(complexity_width)} |",
+            separator,
+        ]
     )
-    lines.append(separator)
 
     for index, item in enumerate(file_metrics):
         lines.append(
@@ -314,17 +334,18 @@ def build_text_with_policy(
             f"{complexity_values[index].rjust(complexity_width)} |"
         )
 
-    lines.append(separator)
-    lines.append(
-        f"| {'OVERALL'.ljust(file_width)} | {overall_coverage.ljust(coverage_width)} | {overall_complexity.rjust(complexity_width)} |"
+    lines.extend(
+        [
+            separator,
+            f"| {'OVERALL'.ljust(file_width)} | {overall_coverage.ljust(coverage_width)} | {overall_complexity.rjust(complexity_width)} |",
+            separator,
+            "Complexity policy:",
+            f"  Target per file: <= {policy.target_per_file:.2f}",
+            f"  Hard max per file: <= {policy.hard_max_per_file:.2f}",
+            f"  Target average: <= {policy.target_avg:.2f}",
+            f"  Hard max average: <= {policy.hard_max_avg:.2f}",
+        ]
     )
-    lines.append(separator)
-
-    lines.append("Complexity policy:")
-    lines.append(f"  Target per file: <= {policy.target_per_file:.2f}")
-    lines.append(f"  Hard max per file: <= {policy.hard_max_per_file:.2f}")
-    lines.append(f"  Target average: <= {policy.target_avg:.2f}")
-    lines.append(f"  Hard max average: <= {policy.hard_max_avg:.2f}")
 
     _append_bullets(lines, "Complexity warnings:", warnings)
     _append_bullets(lines, "Complexity violations:", violations)
