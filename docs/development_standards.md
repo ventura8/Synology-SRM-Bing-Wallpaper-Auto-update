@@ -2,7 +2,7 @@
 
 Canonical agent rules and skill workflows: [`../AGENTS.md`](../AGENTS.md).
 
-**Current release:** [v1.0.4](releases/v1.0.4.md)
+**Current release:** [v1.0.5](releases/v1.0.5.md)
 
 ## Mandatory Quality Flow
 
@@ -79,5 +79,8 @@ CI must follow the same mandatory order and gates.
   turn off Automatic Analysis, and add the `SONAR_TOKEN` repository secret.
 - Keep the Sonar quality gate clean: fix reported issues at the root cause; do not
   mark them as won't-fix or add `NOSONAR` (same no-suppression policy as linters).
-- Coverage is enforced by the kcov ≥90% gate; Sonar coverage import is disabled
-  because kcov shell coverage is not a Sonar-supported report format.
+- Coverage is enforced by the kcov ≥90% gate. The `coverage-report` job converts the
+  merged Cobertura report with `tools/cobertura_to_sonar.py` into Sonar generic coverage
+  (`sonar.coverageReportPaths`), and the `sonarqube` job imports it, so Sonar shows the
+  same product-script coverage. Dev tooling (`tools/**`) and workflows are excluded
+  from Sonar coverage.

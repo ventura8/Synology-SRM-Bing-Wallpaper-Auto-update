@@ -262,10 +262,13 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
   - Docker `srm-mock` build/cache
   - parallel unit / component / e2e
   - merge coverage + ≥90% gate + complexity summary
-  - `sonarqube` job (after `quality`): SonarQube Cloud scan via
+  - `sonarqube` job (after `coverage-report`): SonarQube Cloud scan via
     `SonarSource/sonarqube-scan-action`, configured by root `sonar-project.properties`
     (org `ventura8`). Needs the `SONAR_TOKEN` repo secret; skips with a notice when
-    the secret is unavailable (fork PRs). Coverage stays gated by kcov, not Sonar.
+    the secret is unavailable (fork PRs). The merged kcov Cobertura report is converted
+    by `tools/cobertura_to_sonar.py` into Sonar generic coverage (`sonar-coverage` artifact)
+    so Sonar reports product-script coverage; `tools/**` and `.github/**` are excluded from
+    Sonar coverage. The ≥90% gate itself stays enforced by kcov.
   - Workflow-level `permissions: contents: read`; grant write scopes per job only.
 - Workflow: `.github/workflows/release.yml` — triggers on `v*` tag push. Requires
   `VERSION` to already equal the tag and `docs/releases/<tag>.md` to already exist
