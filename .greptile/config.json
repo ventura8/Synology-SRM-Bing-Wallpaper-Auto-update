@@ -1,0 +1,8 @@
+{
+  "autoReview": ["open"],
+  "triggerOnDrafts": false,
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax", "style"],
+  "ignorePatterns": "assets/**\ncoverage/**\ndocs/releases/**\ndocs/archive/**",
+  "instructions": "Follow AGENTS.md. Product scripts (bing_wallpaper_auto_update.sh, install.sh, uninstall.sh) are POSIX sh for Synology SRM 1.3: flag bashisms. Error: messages go to stderr and exit nonzero; recoverable problems use Warning:. Downloads keep TLS verification and use --max-redirect=0. No lint suppressions (shellcheck disable, noqa, NOSONAR, markdownlint-disable). Non-Markdown lines <= 140 chars. Behavior changes need BATS tests; coverage must stay >= 90%."
+}

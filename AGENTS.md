@@ -27,6 +27,7 @@ under `.agents/skills/`, with Copilot-oriented mirrors under `.github/`.
 | --- | --- |
 | `AGENTS.md` | Canonical project rules for any coding agent |
 | `.agents/skills/*/SKILL.md` | Task skills (quality, tests, install, PR review) |
+| `.greptile/config.json` | Greptile PR reviewer settings (see skill `review-with-greptile`) |
 | `.agent/instructions.md` | Short AI-agnostic pointer into this file |
 | `CLAUDE.md` | Thin entrypoint for Claude Code (auto-loaded) |
 | `GEMINI.md` | Thin entrypoint for Gemini CLI (auto-loaded) |
@@ -306,3 +307,5 @@ POSIX parsing — changing parsers requires SRM compatibility review and tests.
   pip/npm/image pins, drift repair)
 - **PR comment resolution** — skill `resolve-pr-comments` (user-requested)
 - **CodeRabbit review/findings** — skill `review-with-coderabbit` (user-gated only)
+- **Greptile PR review** — skill `review-with-greptile` (config `.greptile/config.json`;
+  50 reviews/month: auto-review on PR open only, re-request via `@greptileai` sparingly)
